@@ -8,7 +8,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+<<<<<<< HEAD
 import 'package:smart_travel_weather_app/main.dart';
+=======
+import 'package:my_first_app/main.dart';
+>>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {

@@ -1,8 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
+<<<<<<< HEAD
         android:label="smart_travel_weather_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+=======
+        android:label="my_first_app"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
+>>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
         <activity
             android:name=".MainActivity"
             android:exported="true"

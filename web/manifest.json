@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
     "name": "smart_travel_weather_app",
     "short_name": "smart_travel_weather_app",
+=======
+    "name": "my_first_app",
+    "short_name": "my_first_app",
+>>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
