@@ -12,6 +12,8 @@ import 'screens/reclamation_list_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/view_reclamations_screen.dart';
 import 'providers/city_provider.dart';
+import 'screens/chat_screen_new.dart';
+import 'screens/culture_module_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -100,6 +102,7 @@ class MyApp extends StatelessWidget {
         '/form': (context) => const ReclamationFormScreen(),
         '/admin': (context) => const ReclamationListScreen(),
         '/view': (context) => const ViewReclamationsScreen(),
+        '/culture': (context) => const CultureModuleScreen(),
       },
     );
   }
