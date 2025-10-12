@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
+import '../widgets/app_drawer.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -89,14 +90,11 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Assistance Client', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF1976D2), // Deep blue color
-        iconTheme: const IconThemeData(color: Colors.white), // Makes back arrow white
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        elevation: 0, // Removes shadow below app bar
+        backgroundColor: const Color(0xFF1976D2),
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
+      drawer: const AppDrawer(),
       body: Column(
         children: [
           Expanded(

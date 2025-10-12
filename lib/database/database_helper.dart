@@ -13,7 +13,7 @@ class DatabaseHelper {
   late SharedPreferences _prefs;
   bool _isInitialized = false;
 
-  // Constants for column names (make them public for external use)
+  // Table and column names
   static const String tableReclamations = 'reclamations';
   static const String columnId = 'id';
   static const String columnName = 'name';
@@ -39,34 +39,8 @@ class DatabaseHelper {
       _prefs = await SharedPreferences.getInstance();
       _isInitialized = true;
       debugPrint('Database initialized successfully');
-      
-      // Log some debug info
-      final keys = _prefs.getKeys();
-      debugPrint('Total keys in SharedPreferences: ${keys.length}');
-      debugPrint('Reclamation keys: ${keys.where((key) => key.startsWith(tableReclamations))}');
-      
     } catch (e) {
       debugPrint('Error initializing database: $e');
-      rethrow;
-    }
-  }
-
-  // Insert a new reclamation
-  Future<int> insertReclamation(Map<String, dynamic> reclamation) async {
-    if (!_isInitialized) await init();
-    
-    try {
-      final id = DateTime.now().millisecondsSinceEpoch.toString();
-      reclamation[columnId] = id;
-      reclamation[columnDate] = DateTime.now().toIso8601String();
-      reclamation[columnStatus] = reclamation[columnStatus] ?? 'new';
-      reclamation[columnResponse] = reclamation[columnResponse] ?? '';
-      
-      final key = '$tableReclamations-$id';
-      await _prefs.setString(key, jsonEncode(reclamation));
-      return 1; // Success
-    } catch (e) {
-      debugPrint('Error inserting reclamation: $e');
       rethrow;
     }
   }
@@ -198,6 +172,26 @@ class DatabaseHelper {
       debugPrint('All reclamations cleared successfully');
     } catch (e) {
       debugPrint('Error clearing reclamations: $e');
+      rethrow;
+    }
+  }
+
+  // Insert a new reclamation
+  Future<int> insert(Map<String, dynamic> reclamation) async {
+    if (!_isInitialized) await init();
+    
+    try {
+      final id = DateTime.now().millisecondsSinceEpoch.toString();
+      reclamation[columnId] = id;
+      reclamation[columnDate] = DateTime.now().toIso8601String();
+      reclamation[columnStatus] = reclamation[columnStatus] ?? 'new';
+      reclamation[columnResponse] = reclamation[columnResponse] ?? '';
+      
+      final key = '$tableReclamations-$id';
+      await _prefs.setString(key, jsonEncode(reclamation));
+      return 1; // Success
+    } catch (e) {
+      debugPrint('Error inserting reclamation: $e');
       rethrow;
     }
   }
