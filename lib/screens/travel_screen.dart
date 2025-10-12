@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/travel_service.dart';
 import '../models/travel.dart';
 import '../services/pdf_service.dart';
+import '../widgets/app_drawer.dart';
 
 class TravelScreen extends StatefulWidget {
   const TravelScreen({Key? key}) : super(key: key);
@@ -249,6 +250,7 @@ class _TravelScreenState extends State<TravelScreen> {
         backgroundColor: Colors.teal,
         centerTitle: true,
       ),
+      drawer: const AppDrawer(),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(12.0),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/weather_service.dart';
 import '../widgets/weather_card.dart';
+import '../widgets/app_drawer.dart';
 
 class WeatherScreen extends StatefulWidget {
   const WeatherScreen({super.key});
@@ -31,6 +32,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Météo actuelle")),
+      drawer: const AppDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

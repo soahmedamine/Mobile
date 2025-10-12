@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'database/database_helper_new.dart' as db_helper;
+import 'services/logement_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/reclamation_form_screen.dart';
 import 'screens/reclamation_list_screen.dart';
@@ -15,10 +17,17 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
+    // Load environment variables
+    await dotenv.load(fileName: ".env");
+
     // Initialize the database
     final dbHelper = db_helper.DatabaseHelper();
     await dbHelper.init();
     
+    // Initialize logement database
+    final logementService = LogementService();
+    await logementService.database;
+
     runApp(
       MultiProvider(
         providers: [
@@ -169,11 +178,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   Future<void> _checkAuthStatus() async {
     try {
-      // Always force logout when checking auth status
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+      final userRole = prefs.getString('user_role');
+
       if (mounted) {
         setState(() {
-          _isLoggedIn = false; // Force login screen
-          _userRole = null;
+          _isLoggedIn = isLoggedIn;
+          _userRole = userRole;
           _isLoading = false;
         });
       }
@@ -190,9 +202,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   // Callback for successful login
   void _onLoginSuccess() {
     if (mounted) {
-      setState(() {
-        _isLoading = true;
-      });
+      // Recheck auth status after successful login
       _checkAuthStatus();
     }
   }

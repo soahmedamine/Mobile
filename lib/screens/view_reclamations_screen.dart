@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../database/database_helper.dart';
 import 'reclamation_detail_screen.dart';
 import 'reclamation_form_screen.dart';
+import '../widgets/app_drawer.dart';
 
 class ViewReclamationsScreen extends StatefulWidget {
   const ViewReclamationsScreen({super.key});
@@ -99,6 +100,7 @@ class ViewReclamationsScreenState extends State<ViewReclamationsScreen> {
           ),
         ],
       ),
+      drawer: const AppDrawer(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _reclamations.isEmpty

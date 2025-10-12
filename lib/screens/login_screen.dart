@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'reclamation_form_screen.dart';
-import 'reclamation_list_screen.dart';
-import 'travel_screen.dart';
 import 'home_screen.dart';
-import 'weather_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
@@ -59,13 +55,20 @@ class _LoginScreenState extends State<LoginScreen> {
         final prefs = await SharedPreferences.getInstance();
         final role = _validAccounts[email]!['role'];
         
-        await prefs.setBool('isLoggedIn', true);
+        await prefs.setBool('is_logged_in', true);
         await prefs.setString('user_email', email);
         await prefs.setString('user_role', role);
 
         if (mounted) {
           setState(() => _isLoading = false);
-          _showOptionsDialog(role);
+
+          // Redirect to home screen
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+
+          // Call the callback if provided
+          widget.onLoginSuccess?.call();
         }
       } else {
         setState(() {
@@ -78,56 +81,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _errorMessage = 'An error occurred. Please try again.';
         _isLoading = false;
       });
-      debugPrint('Login error: $e');
     }
   }
 
-  void _showOptionsDialog(String role) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Choose an option'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.flight),
-                title: const Text('Travel'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => const TravelScreen()),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.cloud),
-                title: const Text('Weather'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => const WeatherScreen()),
-                  );
-                },
-              ),
-              if (role == 'admin')
-                ListTile(
-                  leading: const Icon(Icons.receipt),
-                  title: const Text('Reclamations'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const ReclamationListScreen()),
-                    );
-                  },
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

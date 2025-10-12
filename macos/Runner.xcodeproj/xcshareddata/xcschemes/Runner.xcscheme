@@ -15,11 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "33CC10EC2044A3C60003C045"
-<<<<<<< HEAD
                BuildableName = "smart_travel_weather_app.app"
-=======
-               BuildableName = "my_first_app.app"
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
                BlueprintName = "Runner"
                ReferencedContainer = "container:Runner.xcodeproj">
             </BuildableReference>
@@ -35,11 +31,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "33CC10EC2044A3C60003C045"
-<<<<<<< HEAD
             BuildableName = "smart_travel_weather_app.app"
-=======
-            BuildableName = "my_first_app.app"
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
             BlueprintName = "Runner"
             ReferencedContainer = "container:Runner.xcodeproj">
          </BuildableReference>
@@ -74,11 +66,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "33CC10EC2044A3C60003C045"
-<<<<<<< HEAD
             BuildableName = "smart_travel_weather_app.app"
-=======
-            BuildableName = "my_first_app.app"
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
             BlueprintName = "Runner"
             ReferencedContainer = "container:Runner.xcodeproj">
          </BuildableReference>
@@ -95,11 +83,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "33CC10EC2044A3C60003C045"
-<<<<<<< HEAD
             BuildableName = "smart_travel_weather_app.app"
-=======
-            BuildableName = "my_first_app.app"
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
             BlueprintName = "Runner"
             ReferencedContainer = "container:Runner.xcodeproj">
          </BuildableReference>

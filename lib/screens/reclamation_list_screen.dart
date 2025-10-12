@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
 import 'view_reclamations_screen.dart';
 import 'chat_screen_new.dart';
+import '../widgets/app_drawer.dart';
 
 class ReclamationListScreen extends StatefulWidget {
   const ReclamationListScreen({super.key});
@@ -121,64 +122,52 @@ class _ReclamationListScreenState extends State<ReclamationListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        // Rediriger vers l'écran de connexion
-        Navigator.pushReplacementNamed(context, '/login');
-        return false; // Empêche la fermeture de l'application
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Liste des Réclamations'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-            tooltip: 'Retour',
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Liste des Réclamations'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ChatScreen()),
+              );
+            },
+            tooltip: 'Assistance',
           ),
-          actions: [
-            // Chat button
-            IconButton(
-              icon: const Icon(Icons.chat, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ChatScreen()),
-                );
-              },
-              tooltip: 'Assistance',
-            ),
-            // Bouton pour voir toutes les réclamations
-            IconButton(
-              icon: const Icon(Icons.list, color: Colors.white),
-              onPressed: () {
-                if (!mounted) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ViewReclamationsScreen(),
-                  ),
-                ).then((_) {
-                  if (mounted) {
-                    _loadReclamations();
-                  }
-                });
-              },
-              tooltip: 'Voir toutes les réclamations',
-            ),
-            // Bouton de déconnexion
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.white),
-              onPressed: _logout,
-              tooltip: 'Déconnexion',
-            ),
-          ],
-        ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _reclamations.isEmpty
-                ? _buildEmptyState()
-                : _buildReclamationsList(),
+          // Bouton pour voir toutes les réclamations
+          IconButton(
+            icon: const Icon(Icons.list, color: Colors.white),
+            onPressed: () {
+              if (!mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ViewReclamationsScreen(),
+                ),
+              ).then((_) {
+                if (mounted) {
+                  _loadReclamations();
+                }
+              });
+            },
+            tooltip: 'Voir toutes les réclamations',
+          ),
+          // Bouton de déconnexion
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: _logout,
+            tooltip: 'Déconnexion',
+          ),
+        ],
       ),
+      drawer: const AppDrawer(),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _reclamations.isEmpty
+              ? _buildEmptyState()
+              : _buildReclamationsList(),
     );
   }
 
