@@ -8,6 +8,7 @@ import '../screens/reclamation_list_screen.dart';
 import '../screens/view_reclamations_screen.dart';
 import '../screens/chat_screen_new.dart';
 import '../screens/logement_list_screen.dart';
+import '../screens/culture_module_screen.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
@@ -132,6 +133,13 @@ class _AppDrawerState extends State<AppDrawer> {
               leading: const Icon(Icons.message, color: Colors.green),
               title: const Text('Chat AI'),
               onTap: () => _navigateTo(const ChatScreen()),
+            ),
+            const Divider(height: 1),
+
+            ListTile(
+              leading: const Icon(Icons.travel_explore, color: Colors.black),
+              title: const Text('Culture & Infos Locales'),
+              onTap: () => _navigateTo(const CultureModuleScreen()),
             ),
             const Divider(height: 1),
 
