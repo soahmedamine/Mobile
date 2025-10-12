@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../database/database_helper.dart';
 import 'chat_screen_new.dart';
+import '../widgets/app_drawer.dart';
 
 class ReclamationFormScreen extends StatefulWidget {
   const ReclamationFormScreen({super.key});
@@ -52,7 +53,7 @@ class ReclamationFormScreenState extends State<ReclamationFormScreen> {
         DatabaseHelper.columnStatus: 'new',
       };
 
-      await _dbHelper.insertReclamation(reclamation);
+      await _dbHelper.insert(reclamation);
       
       if (mounted) {
         // Clear the form
@@ -98,52 +99,36 @@ class ReclamationFormScreenState extends State<ReclamationFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        // Navigate to login screen when back button is pressed
-        Navigator.pushReplacementNamed(context, '/login');
-        return false; // Prevent default back behavior
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Nouvelle Réclamation'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nouvelle Réclamation'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat),
             onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login');
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ChatScreen()),
+              );
             },
+            tooltip: 'Assistance',
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.chat),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ChatScreen()),
-                );
-              },
-              tooltip: 'Assistance',
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _logout,
-              tooltip: 'Déconnexion',
-            ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nom complet',
-                    prefixIcon: Icon(Icons.person),
-                  ),
+        ],
+      ),
+      drawer: const AppDrawer(),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nom complet',
+                  prefixIcon: Icon(Icons.person),
+                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Veuillez entrer votre nom';
@@ -216,7 +201,6 @@ class ReclamationFormScreenState extends State<ReclamationFormScreen> {
           ),
         ),
         ),
-      ),
-    );
+      );
   }
 }
