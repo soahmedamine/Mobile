@@ -1,57 +1,37 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-import 'package:provider/provider.dart';
-import 'screens/home_screen.dart';
-import 'providers/city_provider.dart';
-
-void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => CityProvider()),
-      ],
-      child: const MyApp(),
-    ),
-  );
-=======
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'database/database_helper.dart';
+import 'database/database_helper_new.dart' as db_helper;
+import 'screens/home_screen.dart';
 import 'screens/reclamation_form_screen.dart';
 import 'screens/reclamation_list_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/view_reclamations_screen.dart';
-import 'screens/chat_screen_new.dart';
+import 'providers/city_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    // Load environment variables
-    try {
-      await dotenv.load(fileName: ".env");
-      if (dotenv.env['OPENAI_API_KEY'] == null) {
-        throw Exception('OPENAI_API_KEY not found in .env file');
-      }
-    } catch (e) {
-      debugPrint('Error loading .env file: $e');
-      // Continue running the app but show a warning
-      debugPrint('Warning: Running without OpenAI API key. Chat features will not work.');
-    }
-    
     // Initialize the database
-    final dbHelper = DatabaseHelper();
+    final dbHelper = db_helper.DatabaseHelper();
     await dbHelper.init();
     
-    runApp(const MyApp());
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => CityProvider()),
+        ],
+        child: const MyApp(),
+      ),
+    );
   } catch (e) {
     debugPrint('Error initializing app: $e');
     runApp(ErrorApp(error: 'Failed to initialize app: ${e.toString()}'));
   }
 }
-
 
 class ErrorApp extends StatelessWidget {
   final String error;
@@ -83,7 +63,7 @@ class ErrorApp extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () => main(), // Redémarrer l'application
+                  onPressed: () => main(),
                   child: const Text('Réessayer'),
                 ),
               ],
@@ -93,7 +73,6 @@ class ErrorApp extends StatelessWidget {
       ),
     );
   }
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
 }
 
 class MyApp extends StatelessWidget {
@@ -102,36 +81,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-<<<<<<< HEAD
       debugShowCheckedModeBanner: false,
-      title: 'Smart Travel App',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        scaffoldBackgroundColor: Colors.grey[100],
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.indigo,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-            backgroundColor: Colors.indigo,
-          ),
-        ),
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
-=======
-      title: 'Gestion des Réclamations',
-      debugShowCheckedModeBanner: false,
+      title: 'Smart Travel & Reclamation App',
       theme: _buildThemeData(),
       home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginScreen(),
+        '/home': (context) => const HomeScreen(),
         '/form': (context) => const ReclamationFormScreen(),
         '/admin': (context) => const ReclamationListScreen(),
         '/view': (context) => const ViewReclamationsScreen(),
@@ -142,12 +98,13 @@ class MyApp extends StatelessWidget {
   ThemeData _buildThemeData() {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.blue,
-        primary: Colors.blue[800],
-        secondary: Colors.blue[600],
+        seedColor: Colors.indigo,
+        primary: Colors.indigo[800],
+        secondary: Colors.indigo[600],
         surface: Colors.white,
       ),
       useMaterial3: true,
+      scaffoldBackgroundColor: Colors.grey[100],
       appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
@@ -211,16 +168,32 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _checkAuthStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('user_email');
-    final role = prefs.getString('user_role');
+    try {
+      // Always force logout when checking auth status
+      if (mounted) {
+        setState(() {
+          _isLoggedIn = false; // Force login screen
+          _userRole = null;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      debugPrint('Error checking auth status: $e');
+    }
+  }
 
+  // Callback for successful login
+  void _onLoginSuccess() {
     if (mounted) {
       setState(() {
-        _isLoggedIn = email != null && role != null;
-        _userRole = role;
-        _isLoading = false;
+        _isLoading = true;
       });
+      _checkAuthStatus();
     }
   }
 
@@ -235,15 +208,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
 
     if (!_isLoggedIn) {
-      return const LoginScreen();
+      return LoginScreen(onLoginSuccess: _onLoginSuccess);
     }
 
-    // Rediriger en fonction du rôle
+    // Redirect based on role
     if (_userRole == 'admin') {
       return const ReclamationListScreen();
     } else {
-      return const ReclamationFormScreen();
+      return const HomeScreen();
     }
   }
 }
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a

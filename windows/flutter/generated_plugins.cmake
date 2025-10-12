@@ -3,11 +3,8 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-<<<<<<< HEAD
   printing
   url_launcher_windows
-=======
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

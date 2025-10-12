@@ -52,7 +52,7 @@ class ReclamationFormScreenState extends State<ReclamationFormScreen> {
         DatabaseHelper.columnStatus: 'new',
       };
 
-      await _dbHelper.insertReclamation(reclamation);
+      await _dbHelper.insert(reclamation);
       
       if (mounted) {
         // Clear the form

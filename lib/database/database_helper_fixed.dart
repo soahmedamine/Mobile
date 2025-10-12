@@ -45,23 +45,33 @@ class DatabaseHelper {
     }
   }
 
-  // Get all reclamations
-  Future<List<Map<String, dynamic>>> getReclamations() async {
-    if (!_isInitialized) {
-      debugPrint('Initializing database in getReclamations...');
-      await init();
-    }
+  // Insert a new reclamation
+  Future<int> insertReclamation(Map<String, dynamic> reclamation) async {
+    if (!_isInitialized) await init();
     
     try {
-      debugPrint('Getting all reclamations...');
+      final id = DateTime.now().millisecondsSinceEpoch.toString();
+      reclamation[columnId] = id;
+      reclamation[columnDate] = DateTime.now().toIso8601String();
+      reclamation[columnStatus] = reclamation[columnStatus] ?? 'new';
+      reclamation[columnResponse] = reclamation[columnResponse] ?? '';
+      
+      final key = '$tableReclamations-$id';
+      await _prefs.setString(key, jsonEncode(reclamation));
+      return 1; // Success
+    } catch (e) {
+      debugPrint('Error inserting reclamation: $e');
+      rethrow;
+    }
+  }
+
+  // Get all reclamations
+  Future<List<Map<String, dynamic>>> getReclamations() async {
+    if (!_isInitialized) await init();
+    
+    try {
       final allKeys = _prefs.getKeys();
-      debugPrint('Total keys in SharedPreferences: ${allKeys.length}');
-      
-      final keys = allKeys
-          .where((key) => key.startsWith('$tableReclamations-'))
-          .toList();
-      
-      debugPrint('Found ${keys.length} reclamation keys');
+      final keys = allKeys.where((key) => key.startsWith('$tableReclamations-')).toList();
       
       final reclamations = <Map<String, dynamic>>[];
       
@@ -69,27 +79,16 @@ class DatabaseHelper {
         final jsonString = _prefs.getString(key);
         if (jsonString != null) {
           try {
-            debugPrint('Parsing reclamation from key: $key');
             final reclamation = Map<String, dynamic>.from(jsonDecode(jsonString));
             reclamations.add(reclamation);
-            debugPrint('Added reclamation: ${reclamation[columnId]} - ${reclamation[columnSubject]}');
           } catch (e) {
             debugPrint('Error parsing reclamation $key: $e');
           }
-        } else {
-          debugPrint('No data found for key: $key');
         }
       }
       
-      debugPrint('Total reclamations parsed: ${reclamations.length}');
-      
       // Sort by date in descending order (newest first)
-      if (reclamations.isNotEmpty) {
-        reclamations.sort((a, b) => 
-            (b[columnDate] as String).compareTo((a[columnDate] as String)));
-      } else {
-        debugPrint('No reclamations to sort');
-      }
+      reclamations.sort((a, b) => (b[columnDate] as String).compareTo((a[columnDate] as String)));
       
       return reclamations;
     } catch (e) {
@@ -172,45 +171,6 @@ class DatabaseHelper {
       debugPrint('All reclamations cleared successfully');
     } catch (e) {
       debugPrint('Error clearing reclamations: $e');
-      rethrow;
-    }
-  }
-
-  // Insert a new reclamation
-  Future<int> insert(Map<String, dynamic> reclamation) async {
-    if (!_isInitialized) await init();
-    
-    try {
-      final id = DateTime.now().millisecondsSinceEpoch.toString();
-      reclamation[columnId] = id;
-      reclamation[columnDate] = DateTime.now().toIso8601String();
-      reclamation[columnStatus] = reclamation[columnStatus] ?? 'new';
-      reclamation[columnResponse] = reclamation[columnResponse] ?? '';
-      
-      final key = '$tableReclamations-$id';
-      await _prefs.setString(key, jsonEncode(reclamation));
-      return 1; // Success
-    } catch (e) {
-      debugPrint('Error inserting reclamation: $e');
-      rethrow;
-    }
-  }
-
-  // Print all reclamations (for debugging)
-  Future<void> printAllReclamations() async {
-    if (!_isInitialized) await init();
-    
-    try {
-      final reclamations = await getReclamations();
-      for (final rec in reclamations) {
-        debugPrint('ID: ${rec[columnId] ?? 'N/A'}');
-        debugPrint('Subject: ${rec[columnSubject] ?? 'N/A'}');
-        debugPrint('Status: ${rec[columnStatus] ?? 'N/A'}');
-        debugPrint('Date: ${rec[columnDate] ?? 'N/A'}');
-        debugPrint('---');
-      }
-    } catch (e) {
-      debugPrint('Error printing reclamations: $e');
       rethrow;
     }
   }

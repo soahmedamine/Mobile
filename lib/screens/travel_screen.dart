@@ -12,6 +12,7 @@ class TravelScreen extends StatefulWidget {
 
 class _TravelScreenState extends State<TravelScreen> {
   final TravelService travelService = TravelService();
+  bool _isLoading = false;
   List<Travel> travels = [];
 
   final TextEditingController destController = TextEditingController();
@@ -31,10 +32,20 @@ class _TravelScreenState extends State<TravelScreen> {
   }
 
   Future<void> loadTravels() async {
-    final data = await travelService.getTravels();
-    setState(() {
-      travels = data;
-    });
+    setState(() => _isLoading = true);
+    try {
+      final data = await travelService.getTravels();
+      setState(() {
+        travels = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading travels: $e')),
+      );
+    }
   }
 
   void clearControllers() {
@@ -46,6 +57,163 @@ class _TravelScreenState extends State<TravelScreen> {
     hebergementController.clear();
     dateDepart = null;
     dateRetour = null;
+  }
+
+  Future<void> _editTravel(Travel travel) async {
+    // Create local controllers for the dialog
+    final destController = TextEditingController(text: travel.destination);
+    final descController = TextEditingController(text: travel.description);
+    final prixController = TextEditingController(text: travel.prix.toString());
+    final placesController = TextEditingController(text: travel.placesDisponibles.toString());
+    final transportController = TextEditingController(text: travel.transport);
+    final hebergementController = TextEditingController(text: travel.hebergement);
+    DateTime? editDateDepart = travel.dateDepart;
+    DateTime? editDateRetour = travel.dateRetour;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Travel'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: destController,
+                      decoration: const InputDecoration(labelText: 'Destination'),
+                    ),
+                    TextField(
+                      controller: descController,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: editDateDepart ?? DateTime.now(),
+                                firstDate: DateTime(2023),
+                                lastDate: DateTime(2030),
+                              );
+                              if (date != null) {
+                                setState(() => editDateDepart = date);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Date de départ',
+                              ),
+                              child: Text(
+                                editDateDepart != null
+                                    ? "${editDateDepart!.day}/${editDateDepart!.month}/${editDateDepart!.year}"
+                                    : 'Select Date',
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: editDateRetour ?? DateTime.now(),
+                                firstDate: DateTime(2023),
+                                lastDate: DateTime(2030),
+                              );
+                              if (date != null) {
+                                setState(() => editDateRetour = date);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Date de retour',
+                              ),
+                              child: Text(
+                                editDateRetour != null
+                                    ? "${editDateRetour!.day}/${editDateRetour!.month}/${editDateRetour!.year}"
+                                    : 'Select Date',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextField(
+                      controller: prixController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Prix'),
+                    ),
+                    TextField(
+                      controller: placesController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Places disponibles'),
+                    ),
+                    TextField(
+                      controller: transportController,
+                      decoration: const InputDecoration(labelText: 'Transport'),
+                    ),
+                    TextField(
+                      controller: hebergementController,
+                      decoration: const InputDecoration(labelText: 'Hébergement'),
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                ElevatedButton(
+                  child: const Text('Save'),
+                  onPressed: () async {
+                    if (destController.text.isEmpty ||
+                        descController.text.isEmpty ||
+                        editDateDepart == null ||
+                        editDateRetour == null ||
+                        prixController.text.isEmpty ||
+                        placesController.text.isEmpty ||
+                        transportController.text.isEmpty ||
+                        hebergementController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please fill all fields')),
+                      );
+                      return;
+                    }
+
+                    final updatedTravel = Travel(
+                      id: travel.id,
+                      destination: destController.text,
+                      description: descController.text,
+                      dateDepart: editDateDepart!,
+                      dateRetour: editDateRetour!,
+                      prix: double.parse(prixController.text),
+                      placesDisponibles: int.parse(placesController.text),
+                      transport: transportController.text,
+                      hebergement: hebergementController.text,
+                    );
+
+                    await travelService.updateTravel(updatedTravel);
+                    loadTravels();
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> pickDate(BuildContext context, bool isDepart) async {
@@ -68,6 +236,13 @@ class _TravelScreenState extends State<TravelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Smart Travel'),
@@ -193,6 +368,7 @@ class _TravelScreenState extends State<TravelScreen> {
                           }
 
                           final travel = Travel(
+                            id: null, // Will be set by the database
                             destination: destController.text,
                             description: descController.text,
                             dateDepart: dateDepart!,
@@ -244,7 +420,7 @@ class _TravelScreenState extends State<TravelScreen> {
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.orange),
                             onPressed: () {
-                              // TODO: Modifier un voyage avec date picker
+                              _editTravel(t);
                             },
                           ),
                           IconButton(
