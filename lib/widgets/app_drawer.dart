@@ -9,6 +9,7 @@ import '../screens/view_reclamations_screen.dart';
 import '../screens/chat_screen_new.dart';
 import '../screens/logement_list_screen.dart';
 import '../screens/culture_module_screen.dart';
+import '../screens/event_list_screen.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
@@ -140,6 +141,13 @@ class _AppDrawerState extends State<AppDrawer> {
               leading: const Icon(Icons.travel_explore, color: Colors.black),
               title: const Text('Culture & Infos Locales'),
               onTap: () => _navigateTo(const CultureModuleScreen()),
+            ),
+            const Divider(height: 1),
+
+            ListTile(
+              leading: const Icon(Icons.event, color: Colors.deepPurple),
+              title: const Text('Événements'),
+              onTap: () => _navigateTo(const EventListScreen()),
             ),
             const Divider(height: 1),
 

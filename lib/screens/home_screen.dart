@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'weather_screen.dart';
 import 'travel_screen.dart';
+import 'event_list_screen.dart';
+import 'logement_list_screen.dart';
 import '../widgets/app_drawer.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -25,8 +27,8 @@ class HomeScreen extends StatelessWidget {
             // Logo
             Image.asset(
               'assets/smartravel.png',
-              width: 180,
-              height: 180,
+              width: 240,
+              height: 240,
             ),
             const SizedBox(height: 40),
             // Bouton météo
@@ -39,7 +41,7 @@ class HomeScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[700],
+                  backgroundColor: Colors.blue[400],
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -74,6 +76,56 @@ class HomeScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const TravelScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Bouton événements
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.event, size: 28),
+                label: const Text(
+                  "Événements",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[400],
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const EventListScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Bouton logements
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.home, size: 28),
+                label: const Text(
+                  "Logements",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[400],
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LogementListScreen()),
                   );
                 },
               ),

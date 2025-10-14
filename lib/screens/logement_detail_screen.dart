@@ -5,6 +5,7 @@ import '../models/logement.dart';
 import '../services/maps_service.dart';
 import '../services/logement_service.dart';
 import '../services/image_service.dart';
+import '../widgets/app_drawer.dart';
 import 'logement_form_screen.dart';
 
 class LogementDetailScreen extends StatefulWidget {
@@ -24,6 +25,7 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       body: CustomScrollView(
         slivers: [
           // App Bar avec image
