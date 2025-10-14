@@ -59,6 +59,7 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   Map<String, dynamic>? _aqComponents;
   bool _aqLoading = false;
 
+  // Recommendations state
   String _recCountry = 'France';
   final _recCountryCtrl = TextEditingController(text: 'France');
   final Set<String> _recInterests = {'gastronomie', 'traditions'};
@@ -167,6 +168,7 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
+    _filterRecommendations();
     _loadRoleAndData();
   }
 
@@ -204,6 +206,14 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _fromCtrl.dispose();
+    _toCtrl.dispose();
+    _amountCtrl.dispose();
+    _countryTimeCtrl.dispose();
+    _tzCtrl.dispose();
+    _aqCityCtrl.dispose();
+    _aqCountryCtrl.dispose();
+    _recCountryCtrl.dispose();
     super.dispose();
   }
 
@@ -763,162 +773,139 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     });
   }
 
-  // ————————————————————————————————————————————————
-  // Recommandations (onglet 5)
-  // ————————————————————————————————————————————————
+  // Recommendations tab
   Widget _buildRecommendationsTab() {
-    final interestPool = const [
-      'gastronomie', 'traditions', 'musée', 'art', 'histoire', 'festival', 'marché', 'artisanat', 'sucré', 'fromage'
-    ];
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Profil voyageur (simplifié)', style: Theme.of(context).textTheme.titleMedium),
+          Text('Pays', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           TextField(
             controller: _recCountryCtrl,
             decoration: const InputDecoration(
-              labelText: 'Pays cible',
-              hintText: 'Ex: France, Tunisia, UK, Türkiye...',
-              prefixIcon: Icon(Icons.flag),
+              labelText: 'Pays (ex: France, Tunisia, Turkey)',
               border: OutlineInputBorder(),
             ),
-            onChanged: (v) => _recCountry = v,
+            onChanged: (val) {
+              setState(() {
+                _recCountry = val.trim();
+                _filterRecommendations();
+              });
+            },
           ),
+          const SizedBox(height: 16),
+          Text('Centres d\'intérêt', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          const Text('Intérêts:'),
-          const SizedBox(height: 4),
           Wrap(
-            spacing: 6,
-            children: interestPool.map((t) {
-              final selected = _recInterests.contains(t);
-              return FilterChip(
-                label: Text(t),
-                selected: selected,
-                onSelected: (s) {
-                  setState(() {
-                    if (s) {
-                      _recInterests.add(t);
-                    } else {
-                      _recInterests.remove(t);
-                    }
-                  });
-                },
-              );
-            }).toList(),
+            spacing: 8,
+            children: [
+              _buildInterestChip('gastronomie'),
+              _buildInterestChip('fromage'),
+              _buildInterestChip('sucré'),
+              _buildInterestChip('traditions'),
+              _buildInterestChip('musée'),
+              _buildInterestChip('art'),
+              _buildInterestChip('marché'),
+              _buildInterestChip('artisanat'),
+            ],
           ),
+          const Divider(height: 32),
+          Text('Activités recommandées', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          ElevatedButton.icon(
-            onPressed: _generateRecommendations,
-            icon: const Icon(Icons.playlist_add_check),
-            label: const Text('Générer les recommandations'),
-          ),
-
+          if (_outActivities.isEmpty)
+            const Text('Aucune activité correspondante', style: TextStyle(color: Colors.grey)),
+          ..._outActivities.map((a) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const Icon(Icons.place),
+              title: Text(a['title'] ?? ''),
+              subtitle: Text('${a['city'] ?? ''} • ${(a['tags'] as List?)?.join(', ') ?? ''}'),
+              trailing: a['price'] != null
+                  ? Text('${a['price']} ${a['currency'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold))
+                  : null,
+            ),
+          )),
           const Divider(height: 24),
-
-          if (_outActivities.isNotEmpty) ...[
-            Text('Activités/Événements', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ..._outActivities.map((a) => Card(
-                  child: ListTile(
-                    title: Text(a['title'] ?? ''),
-                    subtitle: Text(
-                        '${a['city'] ?? ''} • ${a['generic'] == true ? 'Général' : (a['country'] ?? '')} • ${(a['tags'] as List?)?.join(', ') ?? ''}'),
-                    trailing: a['price'] != null ? Text('${a['price']} ${a['currency'] ?? ''}') : null,
-                  ),
-                )),
-          ],
-
-          if (_outDishes.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('Plats à essayer', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ..._outDishes.map((d) => Card(
-                  child: ListTile(
-                    title: Text(d['name'] ?? ''),
-                    subtitle: Text('${d['generic'] == true ? 'Général' : (d['country'] ?? '')} • ${(d['tags'] as List?)?.join(', ') ?? ''}'),
-                  ),
-                )),
-          ],
-
-          if (_outBehaviors.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('Comportements utiles', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ..._outBehaviors.map((b) => Card(
-                  child: ListTile(
-                    leading: Icon(b['type'] == 'adopter' ? Icons.thumb_up : Icons.block,
-                        color: b['type'] == 'adopter' ? Colors.green : Colors.red),
-                    title: Text(b['text'] ?? ''),
-                    subtitle: Text('${b['generic'] == true ? 'Général' : (b['country'] ?? '')} • ${(b['tags'] as List?)?.join(', ') ?? ''}'),
-                  ),
-                )),
-          ],
+          Text('Plats à découvrir', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          if (_outDishes.isEmpty)
+            const Text('Aucun plat correspondant', style: TextStyle(color: Colors.grey)),
+          ..._outDishes.map((d) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const Icon(Icons.restaurant),
+              title: Text(d['name'] ?? ''),
+              subtitle: Text((d['tags'] as List?)?.join(', ') ?? ''),
+            ),
+          )),
+          const Divider(height: 24),
+          Text('Comportements culturels', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          if (_outBehaviors.isEmpty)
+            const Text('Aucun comportement correspondant', style: TextStyle(color: Colors.grey)),
+          ..._outBehaviors.map((b) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            color: b['type'] == 'adopter' ? Colors.green[50] : Colors.orange[50],
+            child: ListTile(
+              leading: Icon(
+                b['type'] == 'adopter' ? Icons.check_circle : Icons.warning,
+                color: b['type'] == 'adopter' ? Colors.green : Colors.orange,
+              ),
+              title: Text(b['type'] == 'adopter' ? 'À adopter' : 'À éviter'),
+              subtitle: Text(b['text'] ?? ''),
+            ),
+          )),
         ],
       ),
     );
   }
 
-  void _generateRecommendations() {
-    String norm(String input) {
-      final s = (input.trim()).toLowerCase();
-      if (s.isEmpty) return '';
-      // France
-      if (['france', 'fr', 'french'].contains(s)) return 'France';
-      // Tunisia / Tunisie
-      if (['tunisia', 'tunisie', 'tn'].contains(s)) return 'Tunisia';
-      // England / UK
-      if (['england', 'uk', 'united kingdom', 'gb', 'great britain', 'britain'].contains(s)) return 'England';
-      // Turkey / Türkiye / Turkia
-      if (['turkey', 'türkiye', 'turkiye', 'turkia', 'tr'].contains(s)) return 'Turkey';
-      // Canada
-      if (['canada', 'ca'].contains(s)) return 'Canada';
-      // Default: Title case first letter
-      return input[0].toUpperCase() + input.substring(1);
-    }
+  Widget _buildInterestChip(String interest) {
+    final selected = _recInterests.contains(interest);
+    return FilterChip(
+      label: Text(interest),
+      selected: selected,
+      onSelected: (val) {
+        setState(() {
+          if (val) {
+            _recInterests.add(interest);
+          } else {
+            _recInterests.remove(interest);
+          }
+          _filterRecommendations();
+        });
+      },
+    );
+  }
 
-    // Simple scoring: country must match, score = number of matching tags with interests
-    int scoreItem(List tags) {
-      if (tags.isEmpty) return 0;
-      int s = 0;
-      for (final t in tags) {
-        if (_recInterests.contains(t)) s++;
-      }
-      return s;
-    }
+  void _filterRecommendations() {
+    final country = _recCountry.toLowerCase();
+    final interests = _recInterests;
 
-    List<Map<String, dynamic>> selectTop(List<Map<String, dynamic>> src, String country, {int top = 5}) {
-      List<Map<String, dynamic>> filtered = src.where((e) => (e['country'] as String).toLowerCase() == country.toLowerCase()).toList();
-      bool generic = false;
-      if (filtered.isEmpty) {
-        filtered = List<Map<String, dynamic>>.from(src);
-        generic = true;
-      }
-      filtered.sort((a, b) {
-        final at = (a['tags'] as List?) ?? const [];
-        final bt = (b['tags'] as List?) ?? const [];
-        final sa = scoreItem(at);
-        final sb = scoreItem(bt);
-        return sb.compareTo(sa);
-      });
-      final out = filtered.take(top).map((e) => Map<String, dynamic>.from(e)).toList();
-      if (generic) {
-        for (final e in out) {
-          e['generic'] = true;
-        }
-      }
-      return out;
-    }
+    _outActivities = _recActivities.where((a) {
+      final actCountry = (a['country'] as String?)?.toLowerCase() ?? '';
+      if (!actCountry.contains(country) && country.isNotEmpty) return false;
+      if (interests.isEmpty) return true;
+      final tags = (a['tags'] as List?)?.cast<String>() ?? [];
+      return tags.any((t) => interests.contains(t));
+    }).toList();
 
-    setState(() {
-      final country = norm(_recCountryCtrl.text.isEmpty ? _recCountry : _recCountryCtrl.text);
-      _recCountry = country;
-      _outActivities = selectTop(_recActivities, country, top: 5);
-      _outDishes = selectTop(_recDishes, country, top: 5);
-      _outBehaviors = selectTop(_recBehaviors, country, top: 6);
-    });
+    _outDishes = _recDishes.where((d) {
+      final dishCountry = (d['country'] as String?)?.toLowerCase() ?? '';
+      if (!dishCountry.contains(country) && country.isNotEmpty) return false;
+      if (interests.isEmpty) return true;
+      final tags = (d['tags'] as List?)?.cast<String>() ?? [];
+      return tags.any((t) => interests.contains(t));
+    }).toList();
+
+    _outBehaviors = _recBehaviors.where((b) {
+      final behCountry = (b['country'] as String?)?.toLowerCase() ?? '';
+      if (!behCountry.contains(country) && country.isNotEmpty) return false;
+      if (interests.isEmpty) return true;
+      final tags = (b['tags'] as List?)?.cast<String>() ?? [];
+      return tags.any((t) => interests.contains(t));
+    }).toList();
   }
 }
