@@ -59,6 +59,10 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   Map<String, dynamic>? _aqComponents;
   bool _aqLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
   String _recCountry = 'France';
   final _recCountryCtrl = TextEditingController(text: 'France');
   final Set<String> _recInterests = {'gastronomie', 'traditions'};
@@ -760,165 +764,6 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
       _aqi = parsed == null ? null : (parsed['aqi'] as int?);
       _aqComponents = parsed == null ? null : (parsed['components'] as Map<String, dynamic>?);
       _aqLoading = false;
-    });
-  }
-
-  // ————————————————————————————————————————————————
-  // Recommandations (onglet 5)
-  // ————————————————————————————————————————————————
-  Widget _buildRecommendationsTab() {
-    final interestPool = const [
-      'gastronomie', 'traditions', 'musée', 'art', 'histoire', 'festival', 'marché', 'artisanat', 'sucré', 'fromage'
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Profil voyageur (simplifié)', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _recCountryCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Pays cible',
-              hintText: 'Ex: France, Tunisia, UK, Türkiye...',
-              prefixIcon: Icon(Icons.flag),
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (v) => _recCountry = v,
-          ),
-          const SizedBox(height: 8),
-          const Text('Intérêts:'),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 6,
-            children: interestPool.map((t) {
-              final selected = _recInterests.contains(t);
-              return FilterChip(
-                label: Text(t),
-                selected: selected,
-                onSelected: (s) {
-                  setState(() {
-                    if (s) {
-                      _recInterests.add(t);
-                    } else {
-                      _recInterests.remove(t);
-                    }
-                  });
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton.icon(
-            onPressed: _generateRecommendations,
-            icon: const Icon(Icons.playlist_add_check),
-            label: const Text('Générer les recommandations'),
-          ),
-
-          const Divider(height: 24),
-
-          if (_outActivities.isNotEmpty) ...[
-            Text('Activités/Événements', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ..._outActivities.map((a) => Card(
-                  child: ListTile(
-                    title: Text(a['title'] ?? ''),
-                    subtitle: Text(
-                        '${a['city'] ?? ''} • ${a['generic'] == true ? 'Général' : (a['country'] ?? '')} • ${(a['tags'] as List?)?.join(', ') ?? ''}'),
-                    trailing: a['price'] != null ? Text('${a['price']} ${a['currency'] ?? ''}') : null,
-                  ),
-                )),
-          ],
-
-          if (_outDishes.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('Plats à essayer', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ..._outDishes.map((d) => Card(
-                  child: ListTile(
-                    title: Text(d['name'] ?? ''),
-                    subtitle: Text('${d['generic'] == true ? 'Général' : (d['country'] ?? '')} • ${(d['tags'] as List?)?.join(', ') ?? ''}'),
-                  ),
-                )),
-          ],
-
-          if (_outBehaviors.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('Comportements utiles', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ..._outBehaviors.map((b) => Card(
-                  child: ListTile(
-                    leading: Icon(b['type'] == 'adopter' ? Icons.thumb_up : Icons.block,
-                        color: b['type'] == 'adopter' ? Colors.green : Colors.red),
-                    title: Text(b['text'] ?? ''),
-                    subtitle: Text('${b['generic'] == true ? 'Général' : (b['country'] ?? '')} • ${(b['tags'] as List?)?.join(', ') ?? ''}'),
-                  ),
-                )),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _generateRecommendations() {
-    String norm(String input) {
-      final s = (input.trim()).toLowerCase();
-      if (s.isEmpty) return '';
-      // France
-      if (['france', 'fr', 'french'].contains(s)) return 'France';
-      // Tunisia / Tunisie
-      if (['tunisia', 'tunisie', 'tn'].contains(s)) return 'Tunisia';
-      // England / UK
-      if (['england', 'uk', 'united kingdom', 'gb', 'great britain', 'britain'].contains(s)) return 'England';
-      // Turkey / Türkiye / Turkia
-      if (['turkey', 'türkiye', 'turkiye', 'turkia', 'tr'].contains(s)) return 'Turkey';
-      // Canada
-      if (['canada', 'ca'].contains(s)) return 'Canada';
-      // Default: Title case first letter
-      return input[0].toUpperCase() + input.substring(1);
-    }
-
-    // Simple scoring: country must match, score = number of matching tags with interests
-    int scoreItem(List tags) {
-      if (tags.isEmpty) return 0;
-      int s = 0;
-      for (final t in tags) {
-        if (_recInterests.contains(t)) s++;
-      }
-      return s;
-    }
-
-    List<Map<String, dynamic>> selectTop(List<Map<String, dynamic>> src, String country, {int top = 5}) {
-      List<Map<String, dynamic>> filtered = src.where((e) => (e['country'] as String).toLowerCase() == country.toLowerCase()).toList();
-      bool generic = false;
-      if (filtered.isEmpty) {
-        filtered = List<Map<String, dynamic>>.from(src);
-        generic = true;
-      }
-      filtered.sort((a, b) {
-        final at = (a['tags'] as List?) ?? const [];
-        final bt = (b['tags'] as List?) ?? const [];
-        final sa = scoreItem(at);
-        final sb = scoreItem(bt);
-        return sb.compareTo(sa);
-      });
-      final out = filtered.take(top).map((e) => Map<String, dynamic>.from(e)).toList();
-      if (generic) {
-        for (final e in out) {
-          e['generic'] = true;
-        }
-      }
-      return out;
-    }
-
-    setState(() {
-      final country = norm(_recCountryCtrl.text.isEmpty ? _recCountry : _recCountryCtrl.text);
-      _recCountry = country;
-      _outActivities = selectTop(_recActivities, country, top: 5);
-      _outDishes = selectTop(_recDishes, country, top: 5);
-      _outBehaviors = selectTop(_recBehaviors, country, top: 6);
     });
   }
 }

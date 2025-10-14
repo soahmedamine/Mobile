@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'database/database_helper_new.dart' as db_helper;
 import 'services/logement_service.dart';
@@ -12,8 +13,10 @@ import 'screens/reclamation_list_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/view_reclamations_screen.dart';
 import 'providers/city_provider.dart';
+import 'providers/event_provider.dart';
 import 'screens/chat_screen_new.dart';
 import 'screens/culture_module_screen.dart';
+import 'screens/event_list_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,10 +33,14 @@ Future<void> main() async {
     final logementService = LogementService();
     await logementService.database;
 
+    // Initialize date formatting for French locale used in the app
+    await initializeDateFormatting('fr_FR', null);
+
     runApp(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => CityProvider()),
+          ChangeNotifierProvider(create: (_) => EventProvider()),
         ],
         child: const MyApp(),
       ),
@@ -103,6 +110,7 @@ class MyApp extends StatelessWidget {
         '/admin': (context) => const ReclamationListScreen(),
         '/view': (context) => const ViewReclamationsScreen(),
         '/culture': (context) => const CultureModuleScreen(),
+        '/events': (context) => const EventListScreen(),
       },
     );
   }
