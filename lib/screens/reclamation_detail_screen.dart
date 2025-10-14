@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper_new.dart';
+import 'admin_response_screen.dart';
+import 'home_screen.dart';
 
-class ReclamationDetailScreen extends StatelessWidget {
+class ReclamationDetailScreen extends StatefulWidget {
   final Map<String, dynamic> reclamation;
 
   const ReclamationDetailScreen({
@@ -11,9 +14,34 @@ class ReclamationDetailScreen extends StatelessWidget {
     required this.reclamation,
   });
 
+  @override
+  State<ReclamationDetailScreen> createState() => _ReclamationDetailScreenState();
+}
+
+class _ReclamationDetailScreenState extends State<ReclamationDetailScreen> {
+  bool _isAdmin = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminRole();
+  }
+
+  Future<void> _checkAdminRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('user_role');
+    if (mounted) {
+      setState(() {
+        _isAdmin = role == 'admin';
+        _isLoading = false;
+      });
+    }
+  }
+
   // Helper method to safely get string values
   String _getString(String key, {String defaultValue = ''}) {
-    final value = reclamation[key];
+    final value = widget.reclamation[key];
     if (value == null) return defaultValue;
     if (value is String) return value;
     return value.toString();
@@ -22,21 +50,28 @@ class ReclamationDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     debugPrint('Building ReclamationDetailScreen');
-    debugPrint('Reclamation data: $reclamation');
+    debugPrint('Reclamation data: ${widget.reclamation}');
     
     // Ensure we have valid data
-    if (reclamation.isEmpty) {
+    if (widget.reclamation.isEmpty) {
       return const Scaffold(
         body: Center(
           child: Text('No reclamation data available'),
         ),
       );
     }
+
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     // Safely extract data using our helper method
     final subject = _getString(DatabaseHelper.columnSubject, defaultValue: 'No Subject');
     final message = _getString(DatabaseHelper.columnMessage, defaultValue: 'No Message');
     final status = _getString(DatabaseHelper.columnStatus, defaultValue: 'No Status');
-    final response = _getString('response', defaultValue: 'No response yet');
+    final response = _getString(DatabaseHelper.columnResponse, defaultValue: '');
     final name = _getString(DatabaseHelper.columnName, defaultValue: 'Not provided');
     final email = _getString(DatabaseHelper.columnEmail, defaultValue: 'Not provided');
     
@@ -48,139 +83,316 @@ class ReclamationDetailScreen extends StatelessWidget {
         : 'No date';
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Reclamation Details'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          },
+          tooltip: 'Back to Home',
+        ),
+        title: const Text(
+          'Détails Réclamation',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.close, color: Colors.white),
             onPressed: () {
-              // Trigger a rebuild by popping and pushing
               Navigator.pop(context);
             },
-            tooltip: 'Refresh',
+            tooltip: 'Fermer',
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status and Date
-            Row(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.blue[800]!,
+              Colors.blue[500]!,
+              Colors.blue[200]!,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildStatusChip(status),
-                const SizedBox(width: 12),
-                Text(
-                  formattedDate,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                // Header Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _buildStatusChip(status),
+                          const Spacer(),
+                          Icon(Icons.calendar_today_outlined, size: 16, color: Colors.white.withOpacity(0.8)),
+                          const SizedBox(width: 6),
+                          Text(
+                            formattedDate,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Sujet',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        subject,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                
+                // Message Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Message',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        message,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.95),
+                          fontSize: 16,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Attachment (if exists)
+                if (widget.reclamation[DatabaseHelper.columnAttachment] != null &&
+                    widget.reclamation[DatabaseHelper.columnAttachment].toString().isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pièce jointe',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.memory(
+                            base64Decode(widget.reclamation[DatabaseHelper.columnAttachment]),
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                
+                // Response (if exists)
+                if (response.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Réponse',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          response,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.95),
+                            fontSize: 16,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                
+                // Contact Info
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Informations de Contact',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                        context,
+                        icon: Icons.person_outline,
+                        label: 'Nom',
+                        value: name,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInfoRow(
+                        context,
+                        icon: Icons.email_outlined,
+                        label: 'Email',
+                        value: email,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Admin Response Button
+                if (_isAdmin) ...[
+                  const SizedBox(height: 20),
+                  Container(
+                    height: 55,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.white, Colors.white.withOpacity(0.9)],
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AdminResponseScreen(
+                              reclamation: Map<String, dynamic>.from(widget.reclamation),
+                            ),
+                          ),
+                        );
+                        
+                        if (result == true && mounted) {
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      icon: Icon(Icons.edit_note, color: Colors.blue[700], size: 24),
+                      label: Text(
+                        'R\u00e9pondre',
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: 24),
-            
-            // Subject
-            Text(
-              'Subject',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subject,
-              style: theme.textTheme.titleLarge,
-            ),
-            const SizedBox(height: 24),
-            
-            // Message
-            Text(
-              'Message',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              message,
-              style: theme.textTheme.bodyLarge,
-            ),
-            
-            // Attachment (if exists)
-            if (reclamation[DatabaseHelper.columnAttachment] != null &&
-                reclamation[DatabaseHelper.columnAttachment].toString().isNotEmpty) ...[
-              const SizedBox(height: 24),
-              Text(
-                'Pièce jointe',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 300),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.memory(
-                    base64Decode(reclamation[DatabaseHelper.columnAttachment]),
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ],
-            
-            // Response (if exists)
-            if (response.isNotEmpty && response != 'No response yet' && response != '') ...[
-              const SizedBox(height: 24),
-              Text(
-                'Response',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  response,
-                  style: theme.textTheme.bodyLarge,
-                ),
-              ),
-            ],
-            
-            // Contact Info
-            const SizedBox(height: 32),
-            Text(
-              'Contact Information',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildInfoRow(
-              context,
-              icon: Icons.person_outline,
-              label: 'Name',
-              value: name,
-            ),
-            _buildInfoRow(
-              context,
-              icon: Icons.email_outlined,
-              label: 'Email',
-              value: email,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -192,74 +404,71 @@ class ReclamationDetailScreen extends StatelessWidget {
     required String label,
     required String value,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.white),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildStatusChip(String status) {
-    Color chipColor;
     String statusText;
 
     switch (status.toLowerCase()) {
       case 'new':
-        chipColor = Colors.blue;
-        statusText = 'New';
+        statusText = 'Nouveau';
         break;
       case 'in_progress':
-        chipColor = Colors.orange;
-        statusText = 'In Progress';
+        statusText = 'En cours';
         break;
       case 'resolved':
-        chipColor = Colors.green;
-        statusText = 'Resolved';
+        statusText = 'Résolu';
         break;
       default:
-        chipColor = Colors.grey;
-        statusText = 'Unknown';
+        statusText = 'Inconnu';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Color.lerp(chipColor, Colors.white, 0.9),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.25),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Color.lerp(chipColor, Colors.black, 0.3) ?? chipColor,
+          color: Colors.white.withOpacity(0.4),
           width: 1,
         ),
       ),
       child: Text(
         statusText,
-        style: TextStyle(
-          color: chipColor,
-          fontWeight: FontWeight.w500,
-          fontSize: 12,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
         ),
       ),
     );

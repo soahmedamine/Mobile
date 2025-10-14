@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper_new.dart';
+import '../services/bad_word_filter.dart';
+import 'home_screen.dart';
 
 class AdminResponseScreen extends StatefulWidget {
   final Map<String, dynamic> reclamation;
@@ -18,6 +20,7 @@ class AdminResponseScreen extends StatefulWidget {
 
 class _AdminResponseScreenState extends State<AdminResponseScreen> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  final BadWordFilter _badWordFilter = BadWordFilter();
   final _responseController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   
@@ -60,9 +63,23 @@ class _AdminResponseScreenState extends State<AdminResponseScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      // Filter bad words from the response
+      final filteredResponse = _badWordFilter.filterText(_responseController.text.trim());
+      
+      // Check if bad words were detected
+      if (_badWordFilter.containsBadWords(_responseController.text.trim()) && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Attention: Des mots inappropriés ont été détectés et filtrés.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      
       final updatedReclamation = Map<String, dynamic>.from(widget.reclamation);
       updatedReclamation[DatabaseHelper.columnStatus] = _selectedStatus;
-      updatedReclamation[DatabaseHelper.columnResponse] = _responseController.text.trim();
+      updatedReclamation[DatabaseHelper.columnResponse] = filteredResponse;
 
       await _dbHelper.updateReclamation(updatedReclamation);
 
@@ -115,61 +132,24 @@ class _AdminResponseScreenState extends State<AdminResponseScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              size: 24,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            onPressed: () => Navigator.pop(context),
-            tooltip: 'Back',
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          },
+          tooltip: 'Back to Home',
         ),
-        title: const Text(
-          'Admin Response',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text('Admin Response'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: Icon(
-                Icons.save,
-                size: 24,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              onPressed: _isSubmitting ? null : _saveResponse,
-              tooltip: 'Save Response',
-            ),
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: _isSubmitting ? null : _saveResponse,
+            tooltip: 'Save Response',
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(

@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../models/budget.dart';
 import '../services/budget_service.dart';
+import 'home_screen.dart';
 
 class BudgetScreen extends StatefulWidget {
   final String travelId;
@@ -114,7 +115,18 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
       length: 3,
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
+              );
+            },
+            tooltip: 'Back to Home',
+          ),
           title: const Text('Travel Budget Tracker'),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
           bottom: TabBar(
             controller: _tabController,
             tabs: const [

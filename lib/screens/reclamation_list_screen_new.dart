@@ -59,14 +59,21 @@ class _ReclamationListScreenState extends State<ReclamationListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: const Text(
-          'My Reclamations',
+          'Mes Réclamations',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 22,
+            color: Colors.white,
           ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
@@ -88,16 +95,28 @@ class _ReclamationListScreenState extends State<ReclamationListScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _reclamations.isEmpty
-              ? _buildEmptyState()
-              : _buildReclamationsList(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.blue[800]!, Colors.blue[500]!, Colors.blue[200]!],
+          ),
+        ),
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Colors.white))
+              : _reclamations.isEmpty
+                  ? _buildEmptyState()
+                  : _buildReclamationsList(),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _navigateToAddReclamation,
         icon: const Icon(Icons.add, size: 24.0),
-        label: const Text('New Reclamation'),
-        backgroundColor: Colors.blue[700],
+        label: const Text('Nouvelle'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.blue[700],
         elevation: 4,
       ),
     );

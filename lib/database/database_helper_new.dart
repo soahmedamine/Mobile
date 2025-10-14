@@ -6,7 +6,6 @@ import 'package:path/path.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class DatabaseHelper {
   // Singleton pattern
@@ -45,12 +44,16 @@ class DatabaseHelper {
   // Initialize the database
   Future<void> init() async {
     if (_isInitialized && _database != null) {
-      debugPrint('Database already initialized');
+      debugPrint('✅ Database already initialized');
       return;
     }
     
     try {
-      debugPrint('Initializing SQLite database for WEB...');
+      // Initialize SharedPreferences first
+      _prefs = await SharedPreferences.getInstance();
+      debugPrint('✅ SharedPreferences initialized');
+      
+      debugPrint('🔄 Initializing SQLite database...');
       
       // For WEB: Use sqflite_common_ffi_web
       if (kIsWeb) {
@@ -64,24 +67,28 @@ class DatabaseHelper {
               await db.execute('''
                 CREATE TABLE $tableReclamations (
                   $columnId TEXT PRIMARY KEY,
-                  $columnName TEXT,
-                  $columnEmail TEXT,
-                  $columnSubject TEXT,
-                  $columnMessage TEXT,
-                  $columnDate TEXT,
-                  $columnStatus TEXT,
+                  $columnName TEXT NOT NULL,
+                  $columnEmail TEXT NOT NULL,
+                  $columnSubject TEXT NOT NULL,
+                  $columnMessage TEXT NOT NULL,
+                  $columnDate TEXT NOT NULL,
+                  $columnStatus TEXT NOT NULL DEFAULT 'new',
                   $columnResponse TEXT,
                   $columnAttachment TEXT
                 )
               ''');
-              debugPrint('✅ Created reclamations table');
+              debugPrint('✅ Created reclamations table (WEB)');
             },
             onUpgrade: (db, oldVersion, newVersion) async {
               if (oldVersion < 2) {
-                await db.execute('''
-                  ALTER TABLE $tableReclamations ADD COLUMN $columnAttachment TEXT
-                ''');
-                debugPrint('✅ Added attachment column');
+                try {
+                  await db.execute('''
+                    ALTER TABLE $tableReclamations ADD COLUMN $columnAttachment TEXT
+                  ''');
+                  debugPrint('✅ Added attachment column');
+                } catch (e) {
+                  debugPrint('Column attachment may already exist: $e');
+                }
               }
             },
           ),
@@ -98,36 +105,43 @@ class DatabaseHelper {
             await db.execute('''
               CREATE TABLE $tableReclamations (
                 $columnId TEXT PRIMARY KEY,
-                $columnName TEXT,
-                $columnEmail TEXT,
-                $columnSubject TEXT,
-                $columnMessage TEXT,
-                $columnDate TEXT,
-                $columnStatus TEXT,
+                $columnName TEXT NOT NULL,
+                $columnEmail TEXT NOT NULL,
+                $columnSubject TEXT NOT NULL,
+                $columnMessage TEXT NOT NULL,
+                $columnDate TEXT NOT NULL,
+                $columnStatus TEXT NOT NULL DEFAULT 'new',
                 $columnResponse TEXT,
                 $columnAttachment TEXT
               )
             ''');
-            debugPrint('✅ Created reclamations table');
+            debugPrint('✅ Created reclamations table (MOBILE)');
           },
           onUpgrade: (db, oldVersion, newVersion) async {
             if (oldVersion < 2) {
-              await db.execute('''
-                ALTER TABLE $tableReclamations ADD COLUMN $columnAttachment TEXT
-              ''');
-              debugPrint('✅ Added attachment column');
+              try {
+                await db.execute('''
+                  ALTER TABLE $tableReclamations ADD COLUMN $columnAttachment TEXT
+                ''');
+                debugPrint('✅ Added attachment column');
+              } catch (e) {
+                debugPrint('Column attachment may already exist: $e');
+              }
             }
           },
         );
       }
       
+      // Migrate data from SharedPreferences to SQLite if needed
+      await _migrateFromSharedPreferences();
+      
       _isInitialized = true;
-      debugPrint('✅ SQLite database initialized successfully (WEB: $kIsWeb)');
       
       // Log record count
       final count = Sqflite.firstIntValue(
         await _database!.rawQuery('SELECT COUNT(*) FROM $tableReclamations')
       );
+      debugPrint('✅ SQLite database initialized successfully (WEB: $kIsWeb)');
       debugPrint('📊 Total reclamations in database: $count');
       
     } catch (e) {
@@ -136,76 +150,136 @@ class DatabaseHelper {
     }
   }
 
-  // Insert a new reclamation
+  // Migrate existing data from SharedPreferences to SQLite
+  Future<void> _migrateFromSharedPreferences() async {
+    try {
+      final allKeys = _prefs.getKeys();
+      final reclamationKeys = allKeys.where((key) => key.startsWith('$tableReclamations-')).toList();
+      
+      if (reclamationKeys.isEmpty) {
+        debugPrint('✅ No data to migrate from SharedPreferences');
+        return;
+      }
+      
+      debugPrint('🔄 Migrating ${reclamationKeys.length} reclamations from SharedPreferences to SQLite...');
+      int migratedCount = 0;
+      
+      for (final key in reclamationKeys) {
+        final jsonString = _prefs.getString(key);
+        if (jsonString != null) {
+          try {
+            final reclamation = Map<String, dynamic>.from(jsonDecode(jsonString));
+            
+            // Check if this reclamation already exists in SQLite
+            final id = reclamation[columnId];
+            if (id != null) {
+              final existing = await _database!.query(
+                tableReclamations,
+                where: '$columnId = ?',
+                whereArgs: [id],
+              );
+              
+              if (existing.isEmpty) {
+                // Insert into SQLite
+                await _database!.insert(
+                  tableReclamations,
+                  reclamation,
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
+                migratedCount++;
+              }
+            }
+          } catch (e) {
+            debugPrint('⚠️ Error migrating reclamation $key: $e');
+          }
+        }
+      }
+      
+      if (migratedCount > 0) {
+        debugPrint('✅ Successfully migrated $migratedCount reclamations to SQLite');
+        debugPrint('🗑️ You can now safely clear SharedPreferences reclamations');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error during migration: $e');
+    }
+  }
+
+  // Insert a new reclamation (compatible with both old and new code)
   Future<int> insertReclamation(Map<String, dynamic> reclamation) async {
     final db = await database;
     
     try {
       final id = DateTime.now().millisecondsSinceEpoch.toString();
       reclamation[columnId] = id;
-      reclamation[columnDate] = DateTime.now().toIso8601String();
+      reclamation[columnDate] = reclamation[columnDate] ?? DateTime.now().toIso8601String();
       reclamation[columnStatus] = reclamation[columnStatus] ?? 'new';
       reclamation[columnResponse] = reclamation[columnResponse] ?? '';
       
-      final key = '$tableReclamations-$id';
-      await _prefs.setString(key, jsonEncode(reclamation));
+      // Insert into SQLite database
+      await db.insert(
+        tableReclamations,
+        reclamation,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      
+      debugPrint('✅ Inserted reclamation with ID: $id');
       return 1; // Success
     } catch (e) {
-      debugPrint('Error inserting reclamation: $e');
+      debugPrint('❌ Error inserting reclamation: $e');
       rethrow;
     }
   }
 
-  // Get all reclamations
+  // Insert method (alias for compatibility with reclamation_form_screen.dart)
+  Future<int> insert(Map<String, dynamic> reclamation) async {
+    return insertReclamation(reclamation);
+  }
+
+  // Get all reclamations from SQLite
   Future<List<Map<String, dynamic>>> getReclamations() async {
     if (!_isInitialized) await init();
     
     try {
-      final allKeys = _prefs.getKeys();
-      final keys = allKeys.where((key) => key.startsWith('$tableReclamations-')).toList();
+      final db = await database;
+      final reclamations = await db.query(
+        tableReclamations,
+        orderBy: '$columnDate DESC', // Newest first
+      );
       
-      final reclamations = <Map<String, dynamic>>[];
-      
-      for (final key in keys) {
-        final jsonString = _prefs.getString(key);
-        if (jsonString != null) {
-          try {
-            final reclamation = Map<String, dynamic>.from(jsonDecode(jsonString));
-            reclamations.add(reclamation);
-          } catch (e) {
-            debugPrint('Error parsing reclamation $key: $e');
-          }
-        }
-      }
-      
-      // Sort by date in descending order (newest first)
-      reclamations.sort((a, b) => (b[columnDate] as String).compareTo((a[columnDate] as String)));
-      
+      debugPrint('📋 Retrieved ${reclamations.length} reclamations from SQLite');
       return reclamations;
     } catch (e) {
-      debugPrint('Error getting reclamations: $e');
+      debugPrint('❌ Error getting reclamations: $e');
       rethrow;
     }
   }
 
-  // Get a specific reclamation by ID
+  // Get a specific reclamation by ID from SQLite
   Future<Map<String, dynamic>?> getReclamation(String id) async {
     if (!_isInitialized) await init();
     
     try {
-      final key = '$tableReclamations-$id';
-      final jsonString = _prefs.getString(key);
+      final db = await database;
+      final results = await db.query(
+        tableReclamations,
+        where: '$columnId = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
       
-      if (jsonString == null) return null;
+      if (results.isEmpty) {
+        debugPrint('⚠️ Reclamation with ID $id not found');
+        return null;
+      }
       
-      return Map<String, dynamic>.from(jsonDecode(jsonString));
+      return results.first;
     } catch (e) {
-      debugPrint('Error getting reclamation: $e');
+      debugPrint('❌ Error getting reclamation: $e');
       rethrow;
     }
   }
 
-  // Update an existing reclamation
+  // Update an existing reclamation in SQLite
   Future<int> updateReclamation(Map<String, dynamic> reclamation) async {
     if (!_isInitialized) await init();
     
@@ -223,45 +297,85 @@ class DatabaseHelper {
         }
       }
       
-      final key = '$tableReclamations-$id';
-      await _prefs.setString(key, jsonEncode(reclamation));
-      return 1; // Success
+      final db = await database;
+      final rowsAffected = await db.update(
+        tableReclamations,
+        reclamation,
+        where: '$columnId = ?',
+        whereArgs: [id],
+      );
+      
+      if (rowsAffected > 0) {
+        debugPrint('✅ Updated reclamation with ID: $id');
+      } else {
+        debugPrint('⚠️ No reclamation found with ID: $id');
+      }
+      
+      return rowsAffected;
     } catch (e) {
-      debugPrint('Error updating reclamation: $e');
+      debugPrint('❌ Error updating reclamation: $e');
       rethrow;
     }
   }
 
-  // Delete a reclamation
+  // Delete a reclamation from SQLite
   Future<int> deleteReclamation(String id) async {
     if (!_isInitialized) await init();
     
     try {
-      final key = '$tableReclamations-$id';
-      final success = await _prefs.remove(key);
-      return success ? 1 : 0;
+      final db = await database;
+      final rowsDeleted = await db.delete(
+        tableReclamations,
+        where: '$columnId = ?',
+        whereArgs: [id],
+      );
+      
+      if (rowsDeleted > 0) {
+        debugPrint('✅ Deleted reclamation with ID: $id');
+      } else {
+        debugPrint('⚠️ No reclamation found with ID: $id to delete');
+      }
+      
+      return rowsDeleted;
     } catch (e) {
-      debugPrint('Error deleting reclamation: $e');
+      debugPrint('❌ Error deleting reclamation: $e');
       rethrow;
     }
   }
 
-  // Clear all reclamations (for testing)
+  // Clear all reclamations from SQLite (for testing)
   Future<void> clearAllReclamations() async {
     if (!_isInitialized) await init();
     
     try {
-      final keys = _prefs.getKeys()
-          .where((key) => key.startsWith('$tableReclamations-'))
-          .toList();
-      
-      for (final key in keys) {
-        await _prefs.remove(key);
-      }
-      
-      debugPrint('All reclamations cleared successfully');
+      final db = await database;
+      final count = await db.delete(tableReclamations);
+      debugPrint('✅ Cleared $count reclamations from SQLite');
     } catch (e) {
-      debugPrint('Error clearing reclamations: $e');
+      debugPrint('❌ Error clearing reclamations: $e');
+      rethrow;
+    }
+  }
+
+  // Print all reclamations (for debugging)
+  Future<void> printAllReclamations() async {
+    if (!_isInitialized) await init();
+    
+    try {
+      final reclamations = await getReclamations();
+      debugPrint('\n========== ALL RECLAMATIONS (${ reclamations.length}) ==========');
+      for (final rec in reclamations) {
+        debugPrint('---');
+        debugPrint('ID: ${rec[columnId] ?? 'N/A'}');
+        debugPrint('Name: ${rec[columnName] ?? 'N/A'}');
+        debugPrint('Email: ${rec[columnEmail] ?? 'N/A'}');
+        debugPrint('Subject: ${rec[columnSubject] ?? 'N/A'}');
+        debugPrint('Status: ${rec[columnStatus] ?? 'N/A'}');
+        debugPrint('Date: ${rec[columnDate] ?? 'N/A'}');
+      }
+      debugPrint('========================================\n');
+    } catch (e) {
+      debugPrint('❌ Error printing reclamations: $e');
       rethrow;
     }
   }
