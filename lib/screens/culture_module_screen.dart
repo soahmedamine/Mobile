@@ -59,10 +59,6 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   Map<String, dynamic>? _aqComponents;
   bool _aqLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
   // Recommendations state
   String _recCountry = 'France';
   final _recCountryCtrl = TextEditingController(text: 'France');

@@ -93,6 +93,20 @@ class HomeScreen extends StatelessWidget {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange[700],
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ViewReclamationsScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
             // Bouton événements
             SizedBox(
               width: double.infinity,
@@ -112,9 +126,6 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const ViewReclamationsScreen(),
-                    ),
                     MaterialPageRoute(builder: (context) => const EventListScreen()),
                   );
                 },
