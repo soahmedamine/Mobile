@@ -36,8 +36,8 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   bool _isAdmin = false;
 
   // Live info services and state
-  final _exchangeService = ExchangeRateService();
-  final _timeService = WorldTimeService();
+  late final ExchangeRateService _exchangeService;
+  late final WorldTimeService _timeService;
   AirQualityService? _airService;
 
   final _fromCtrl = TextEditingController(text: 'USD');
@@ -63,6 +63,116 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+  // Recommendations state
+  String _recCountry = 'France';
+  final _recCountryCtrl = TextEditingController(text: 'France');
+  final Set<String> _recInterests = {'gastronomie', 'traditions'};
+  final List<Map<String, dynamic>> _recActivities = [
+    {'country': 'France', 'city': 'Lille', 'title': 'Palais des Beaux-Arts', 'tags': ['musée','art','traditions']},
+    {'country': 'France', 'city': 'Paris', 'title': 'Atelier dégustation de fromages', 'tags': ['gastronomie','fromage','atelier'], 'price': 35, 'currency': 'EUR'},
+    {'country': 'Tunisia', 'city': 'Tunis', 'title': 'Médina de Tunis', 'tags': ['patrimoine','traditions','architecture']},
+    {'country': 'Tunisia', 'city': 'Tunis', 'title': 'Musée du Bardo', 'tags': ['musée','histoire','mosaïques']},
+    {'country': 'England', 'city': 'London', 'title': 'British Museum', 'tags': ['musée','histoire']},
+    {'country': 'England', 'city': 'London', 'title': 'West End Theatre', 'tags': ['spectacle','arts']},
+    {'country': 'Turkey', 'city': 'Istanbul', 'title': 'Sainte-Sophie & Sultanahmet', 'tags': ['patrimoine','architecture']},
+    {'country': 'Turkey', 'city': 'Istanbul', 'title': 'Grand Bazar', 'tags': ['marché','artisanat','négociation']},
+    {'country': 'Canada', 'city': 'Montréal', 'title': 'Musée des Beaux-Arts de Montréal', 'tags': ['musée','art']},
+    {'country': 'Canada', 'city': 'Québec', 'title': 'Vieux-Québec', 'tags': ['patrimoine','balade']},
+    // France extra
+    {'country': 'France', 'city': 'Paris', 'title': 'Festival du Fromage et du Vin', 'tags': ['festival','gastronomie','fromage','traditions']},
+    {'country': 'France', 'city': 'Lyon', 'title': 'Halles de Lyon Paul Bocuse', 'tags': ['marché','gastronomie']},
+    {'country': 'France', 'city': 'Paris', 'title': 'Musée d’Orsay', 'tags': ['musée','art','histoire']},
+    {'country': 'France', 'city': 'Strasbourg', 'title': 'Marché de Noël', 'tags': ['marché','festival','traditions','sucré']},
+    {'country': 'France', 'city': 'Bayonne', 'title': 'Atelier chocolat', 'tags': ['atelier','sucré','gastronomie']},
+    // Tunisia extra
+    {'country': 'Tunisia', 'city': 'Sidi Bou Saïd', 'title': 'Balade artisanat & cafés', 'tags': ['artisanat','traditions','sucré']},
+    {'country': 'Tunisia', 'city': 'Nabeul', 'title': 'Souk de la poterie', 'tags': ['marché','artisanat']},
+    {'country': 'Tunisia', 'city': 'Kairouan', 'title': 'Visite médersa & tissage', 'tags': ['histoire','artisanat','traditions']},
+    {'country': 'Tunisia', 'city': 'Sousse', 'title': 'Musée archéologique', 'tags': ['musée','histoire']},
+    // England extra
+    {'country': 'England', 'city': 'London', 'title': 'National Gallery', 'tags': ['musée','art']},
+    {'country': 'England', 'city': 'London', 'title': 'Borough Market food tour', 'tags': ['marché','gastronomie']},
+    {'country': 'England', 'city': 'Edinburgh', 'title': 'Festival Fringe (été)', 'tags': ['festival','arts']},
+    {'country': 'England', 'city': 'Bath', 'title': 'Roman Baths & histoire', 'tags': ['histoire','patrimoine']},
+    // Turkey extra
+    {'country': 'Turkey', 'city': 'Gaziantep', 'title': 'Parcours baklava & pistache', 'tags': ['gastronomie','sucré','artisanat']},
+    {'country': 'Turkey', 'city': 'Cappadocia', 'title': 'Atelier poterie à Avanos', 'tags': ['artisanat','traditions']},
+    {'country': 'Turkey', 'city': 'Istanbul', 'title': 'Marché aux épices', 'tags': ['marché','gastronomie','traditions']},
+    {'country': 'Turkey', 'city': 'Istanbul', 'title': 'Musée d’Art Moderne', 'tags': ['musée','art']},
+    // Canada extra
+    {'country': 'Canada', 'city': 'Montréal', 'title': 'Marché Jean-Talon', 'tags': ['marché','gastronomie']},
+    {'country': 'Canada', 'city': 'Montréal', 'title': 'Musée Pointe-à-Callière', 'tags': ['musée','histoire']},
+    {'country': 'Canada', 'city': 'Québec', 'title': 'Festival d’été de Québec', 'tags': ['festival','arts']},
+    {'country': 'Canada', 'city': 'Ottawa', 'title': 'Musée des beaux-arts du Canada', 'tags': ['musée','art']},
+  ];
+  final List<Map<String, dynamic>> _recDishes = [
+    {'country': 'France', 'name': 'Fromages AOP', 'tags': ['fromage','gastronomie']},
+    {'country': 'France', 'name': 'Pâtisseries (éclairs, macarons)', 'tags': ['pâtisserie','sucré']},
+    {'country': 'Tunisia', 'name': 'Couscous tunisien', 'tags': ['gastronomie']},
+    {'country': 'Tunisia', 'name': "Brik à l'œuf", 'tags': ['street-food']},
+    {'country': 'England', 'name': 'Fish & chips', 'tags': ['comfort-food']},
+    {'country': 'England', 'name': 'Afternoon tea', 'tags': ['traditions','sucré']},
+    {'country': 'Turkey', 'name': 'Kebab, Meze, Baklava', 'tags': ['gastronomie','sucré']},
+    {'country': 'Turkey', 'name': 'Menemen', 'tags': ['petit-déjeuner']},
+    {'country': 'Canada', 'name': 'Poutine', 'tags': ['gastronomie locale']},
+    {'country': 'Canada', 'name': 'Tourtière', 'tags': ['spécialité']},
+    // France extra
+    {'country': 'France', 'name': 'Raclette/Fondue', 'tags': ['fromage','gastronomie']},
+    {'country': 'France', 'name': 'Crêpes', 'tags': ['sucré','pâtisserie']},
+    {'country': 'France', 'name': 'Baguette tradition', 'tags': ['artisanat','traditions']},
+    // Tunisia extra
+    {'country': 'Tunisia', 'name': 'Lablabi', 'tags': ['gastronomie']},
+    {'country': 'Tunisia', 'name': 'Makroud', 'tags': ['sucré','artisanat']},
+    {'country': 'Tunisia', 'name': 'Harissa artisanale', 'tags': ['marché','artisanat']},
+    // England extra
+    {'country': 'England', 'name': 'Cheddar/ Stilton', 'tags': ['fromage','traditions']},
+    {'country': 'England', 'name': 'Cornish pasty', 'tags': ['artisanat','comfort-food']},
+    {'country': 'England', 'name': 'Scones & clotted cream', 'tags': ['sucré','traditions']},
+    // Turkey extra
+    {'country': 'Turkey', 'name': 'Simit', 'tags': ['artisanat','marché']},
+    {'country': 'Turkey', 'name': 'Lokum (Turkish delight)', 'tags': ['sucré','traditions']},
+    {'country': 'Turkey', 'name': 'Manti', 'tags': ['gastronomie']},
+    // Canada extra
+    {'country': 'Canada', 'name': 'Sirop d’érable (dégustation)', 'tags': ['sucré','traditions']},
+    {'country': 'Canada', 'name': 'Bagel de Montréal', 'tags': ['artisanat','marché']},
+    {'country': 'Canada', 'name': 'Smoked meat', 'tags': ['gastronomie']},
+  ];
+  final List<Map<String, dynamic>> _recBehaviors = [
+    {'country': 'France', 'type': 'adopter', 'text': 'Dire Bonjour/Merci; ton formel au premier contact', 'tags': ['politesse','traditions']},
+    {'country': 'France', 'type': 'eviter', 'text': 'Éviter de tutoyer d’emblée', 'tags': ['politesse']},
+    {'country': 'Tunisia', 'type': 'adopter', 'text': 'Tenue décente selon lieux; saluer avant le sujet', 'tags': ['traditions']},
+    {'country': 'Tunisia', 'type': 'eviter', 'text': 'Éviter critiques frontales des traditions', 'tags': ['traditions']},
+    {'country': 'England', 'type': 'adopter', 'text': 'Files d’attente, please/thank you', 'tags': ['politesse']},
+    {'country': 'England', 'type': 'eviter', 'text': 'Éviter la familiarité trop rapide', 'tags': ['politesse']},
+    {'country': 'Turkey', 'type': 'adopter', 'text': 'Modestie vestimentaire dans lieux religieux', 'tags': ['traditions']},
+    {'country': 'Turkey', 'type': 'eviter', 'text': 'Ne pas manquer de respect aux rites de prière', 'tags': ['traditions']},
+    {'country': 'Canada', 'type': 'adopter', 'text': 'Politesse, respect de la diversité', 'tags': ['civisme']},
+    {'country': 'Canada', 'type': 'eviter', 'text': 'Éviter propos clivants', 'tags': ['civisme']},
+    // France extra
+    {'country': 'France', 'type': 'adopter', 'text': 'Respecter l’étiquette de table (pain, fromage, vin)', 'tags': ['traditions','fromage','gastronomie']},
+    {'country': 'France', 'type': 'eviter', 'text': 'Couper le fromage n’importe comment (attention aux pointes)', 'tags': ['fromage','traditions']},
+    // Tunisia extra
+    {'country': 'Tunisia', 'type': 'adopter', 'text': 'Négociation courtoise au marché; proposer salutations', 'tags': ['marché','traditions']},
+    {'country': 'Tunisia', 'type': 'eviter', 'text': 'Manquer de respect aux coutumes locales', 'tags': ['traditions']},
+    // England extra
+    {'country': 'England', 'type': 'adopter', 'text': 'Humour léger, auto-dérision bienvenue', 'tags': ['traditions']},
+    {'country': 'England', 'type': 'eviter', 'text': 'Couper les files/queues et parler trop fort', 'tags': ['politesse']},
+    // Turkey extra
+    {'country': 'Turkey', 'type': 'adopter', 'text': 'Accepter le thé par politesse; respect des aînés', 'tags': ['traditions','gastronomie']},
+    {'country': 'Turkey', 'type': 'eviter', 'text': 'Photographier des personnes sans consentement', 'tags': ['traditions']},
+    // Canada extra
+    {'country': 'Canada', 'type': 'adopter', 'text': 'Tenir la porte; parler calmement; diversité respectée', 'tags': ['civisme']},
+    {'country': 'Canada', 'type': 'eviter', 'text': 'Ignorer les règles de civisme (déchets, bruit nocturne)', 'tags': ['civisme']},
+  ];
+  List<Map<String, dynamic>> _outActivities = [];
+  List<Map<String, dynamic>> _outDishes = [];
+  List<Map<String, dynamic>> _outBehaviors = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 5, vsync: this);
+    _filterRecommendations();
     _loadRoleAndData();
   }
 
@@ -76,6 +186,10 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     } else {
       _airService = null;
     }
+    final fastKey = dotenv.env['FASTFOREX_API_KEY'] ?? '';
+    _exchangeService = ExchangeRateService(fastForexKey: fastKey);
+    final tzdbKey = dotenv.env['TIMEZONEDB_API_KEY'] ?? '';
+    _timeService = WorldTimeService(timeZoneDbKey: tzdbKey);
     await _loadAll();
   }
 
@@ -96,6 +210,14 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _fromCtrl.dispose();
+    _toCtrl.dispose();
+    _amountCtrl.dispose();
+    _countryTimeCtrl.dispose();
+    _tzCtrl.dispose();
+    _aqCityCtrl.dispose();
+    _aqCountryCtrl.dispose();
+    _recCountryCtrl.dispose();
     super.dispose();
   }
 
@@ -111,6 +233,7 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
             Tab(icon: Icon(Icons.translate), text: 'Expressions'),
             Tab(icon: Icon(Icons.health_and_safety), text: 'Sécurité & Santé'),
             Tab(icon: Icon(Icons.insights), text: 'Infos en direct'),
+            Tab(icon: Icon(Icons.recommend), text: 'Recommandations'),
           ],
         ),
       ),
@@ -123,6 +246,7 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                 _buildExpressionTab(),
                 _buildSecuriteTab(),
                 _buildLiveTab(),
+                _buildRecommendationsTab(),
               ],
             ),
       floatingActionButton: _isAdmin
@@ -651,5 +775,141 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
       _aqComponents = parsed == null ? null : (parsed['components'] as Map<String, dynamic>?);
       _aqLoading = false;
     });
+  }
+
+  // Recommendations tab
+  Widget _buildRecommendationsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Pays', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _recCountryCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Pays (ex: France, Tunisia, Turkey)',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (val) {
+              setState(() {
+                _recCountry = val.trim();
+                _filterRecommendations();
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          Text('Centres d\'intérêt', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              _buildInterestChip('gastronomie'),
+              _buildInterestChip('fromage'),
+              _buildInterestChip('sucré'),
+              _buildInterestChip('traditions'),
+              _buildInterestChip('musée'),
+              _buildInterestChip('art'),
+              _buildInterestChip('marché'),
+              _buildInterestChip('artisanat'),
+            ],
+          ),
+          const Divider(height: 32),
+          Text('Activités recommandées', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          if (_outActivities.isEmpty)
+            const Text('Aucune activité correspondante', style: TextStyle(color: Colors.grey)),
+          ..._outActivities.map((a) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const Icon(Icons.place),
+              title: Text(a['title'] ?? ''),
+              subtitle: Text('${a['city'] ?? ''} • ${(a['tags'] as List?)?.join(', ') ?? ''}'),
+              trailing: a['price'] != null
+                  ? Text('${a['price']} ${a['currency'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold))
+                  : null,
+            ),
+          )),
+          const Divider(height: 24),
+          Text('Plats à découvrir', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          if (_outDishes.isEmpty)
+            const Text('Aucun plat correspondant', style: TextStyle(color: Colors.grey)),
+          ..._outDishes.map((d) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const Icon(Icons.restaurant),
+              title: Text(d['name'] ?? ''),
+              subtitle: Text((d['tags'] as List?)?.join(', ') ?? ''),
+            ),
+          )),
+          const Divider(height: 24),
+          Text('Comportements culturels', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          if (_outBehaviors.isEmpty)
+            const Text('Aucun comportement correspondant', style: TextStyle(color: Colors.grey)),
+          ..._outBehaviors.map((b) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            color: b['type'] == 'adopter' ? Colors.green[50] : Colors.orange[50],
+            child: ListTile(
+              leading: Icon(
+                b['type'] == 'adopter' ? Icons.check_circle : Icons.warning,
+                color: b['type'] == 'adopter' ? Colors.green : Colors.orange,
+              ),
+              title: Text(b['type'] == 'adopter' ? 'À adopter' : 'À éviter'),
+              subtitle: Text(b['text'] ?? ''),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInterestChip(String interest) {
+    final selected = _recInterests.contains(interest);
+    return FilterChip(
+      label: Text(interest),
+      selected: selected,
+      onSelected: (val) {
+        setState(() {
+          if (val) {
+            _recInterests.add(interest);
+          } else {
+            _recInterests.remove(interest);
+          }
+          _filterRecommendations();
+        });
+      },
+    );
+  }
+
+  void _filterRecommendations() {
+    final country = _recCountry.toLowerCase();
+    final interests = _recInterests;
+
+    _outActivities = _recActivities.where((a) {
+      final actCountry = (a['country'] as String?)?.toLowerCase() ?? '';
+      if (!actCountry.contains(country) && country.isNotEmpty) return false;
+      if (interests.isEmpty) return true;
+      final tags = (a['tags'] as List?)?.cast<String>() ?? [];
+      return tags.any((t) => interests.contains(t));
+    }).toList();
+
+    _outDishes = _recDishes.where((d) {
+      final dishCountry = (d['country'] as String?)?.toLowerCase() ?? '';
+      if (!dishCountry.contains(country) && country.isNotEmpty) return false;
+      if (interests.isEmpty) return true;
+      final tags = (d['tags'] as List?)?.cast<String>() ?? [];
+      return tags.any((t) => interests.contains(t));
+    }).toList();
+
+    _outBehaviors = _recBehaviors.where((b) {
+      final behCountry = (b['country'] as String?)?.toLowerCase() ?? '';
+      if (!behCountry.contains(country) && country.isNotEmpty) return false;
+      if (interests.isEmpty) return true;
+      final tags = (b['tags'] as List?)?.cast<String>() ?? [];
+      return tags.any((t) => interests.contains(t));
+    }).toList();
   }
 }

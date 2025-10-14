@@ -3,6 +3,10 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:path/path.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class DatabaseHelper {
   // Singleton pattern
@@ -12,6 +16,8 @@ class DatabaseHelper {
 
   // Database instance
   Database? _database;
+  // SharedPreferences instance
+  late SharedPreferences _prefs;
   bool _isInitialized = false;
 
   // Constants for column names
@@ -141,60 +147,67 @@ class DatabaseHelper {
       reclamation[columnStatus] = reclamation[columnStatus] ?? 'new';
       reclamation[columnResponse] = reclamation[columnResponse] ?? '';
       
-      await db.insert(
-        tableReclamations,
-        reclamation,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      
-      debugPrint('✅ Inserted reclamation with ID: $id');
+      final key = '$tableReclamations-$id';
+      await _prefs.setString(key, jsonEncode(reclamation));
       return 1; // Success
     } catch (e) {
-      debugPrint('❌ Error inserting reclamation: $e');
+      debugPrint('Error inserting reclamation: $e');
       rethrow;
     }
   }
 
   // Get all reclamations
   Future<List<Map<String, dynamic>>> getReclamations() async {
-    final db = await database;
+    if (!_isInitialized) await init();
     
     try {
-      final List<Map<String, dynamic>> reclamations = await db.query(
-        tableReclamations,
-        orderBy: '$columnDate DESC', // Newest first
-      );
+      final allKeys = _prefs.getKeys();
+      final keys = allKeys.where((key) => key.startsWith('$tableReclamations-')).toList();
       
-      debugPrint('📋 Retrieved ${reclamations.length} reclamations from SQLite');
+      final reclamations = <Map<String, dynamic>>[];
+      
+      for (final key in keys) {
+        final jsonString = _prefs.getString(key);
+        if (jsonString != null) {
+          try {
+            final reclamation = Map<String, dynamic>.from(jsonDecode(jsonString));
+            reclamations.add(reclamation);
+          } catch (e) {
+            debugPrint('Error parsing reclamation $key: $e');
+          }
+        }
+      }
+      
+      // Sort by date in descending order (newest first)
+      reclamations.sort((a, b) => (b[columnDate] as String).compareTo((a[columnDate] as String)));
+      
       return reclamations;
     } catch (e) {
-      debugPrint('❌ Error getting reclamations: $e');
+      debugPrint('Error getting reclamations: $e');
       rethrow;
     }
   }
 
   // Get a specific reclamation by ID
   Future<Map<String, dynamic>?> getReclamation(String id) async {
-    final db = await database;
+    if (!_isInitialized) await init();
     
     try {
-      final List<Map<String, dynamic>> results = await db.query(
-        tableReclamations,
-        where: '$columnId = ?',
-        whereArgs: [id],
-      );
+      final key = '$tableReclamations-$id';
+      final jsonString = _prefs.getString(key);
       
-      if (results.isEmpty) return null;
-      return results.first;
+      if (jsonString == null) return null;
+      
+      return Map<String, dynamic>.from(jsonDecode(jsonString));
     } catch (e) {
-      debugPrint('❌ Error getting reclamation: $e');
+      debugPrint('Error getting reclamation: $e');
       rethrow;
     }
   }
 
   // Update an existing reclamation
   Future<int> updateReclamation(Map<String, dynamic> reclamation) async {
-    final db = await database;
+    if (!_isInitialized) await init();
     
     try {
       final id = reclamation[columnId];
@@ -210,50 +223,45 @@ class DatabaseHelper {
         }
       }
       
-      final count = await db.update(
-        tableReclamations,
-        reclamation,
-        where: '$columnId = ?',
-        whereArgs: [id],
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      
-      debugPrint('✅ Updated reclamation with ID: $id (rows affected: $count)');
-      return count;
+      final key = '$tableReclamations-$id';
+      await _prefs.setString(key, jsonEncode(reclamation));
+      return 1; // Success
     } catch (e) {
-      debugPrint('❌ Error updating reclamation: $e');
+      debugPrint('Error updating reclamation: $e');
       rethrow;
     }
   }
 
   // Delete a reclamation
   Future<int> deleteReclamation(String id) async {
-    final db = await database;
+    if (!_isInitialized) await init();
     
     try {
-      final count = await db.delete(
-        tableReclamations,
-        where: '$columnId = ?',
-        whereArgs: [id],
-      );
-      
-      debugPrint('✅ Deleted reclamation with ID: $id');
-      return count;
+      final key = '$tableReclamations-$id';
+      final success = await _prefs.remove(key);
+      return success ? 1 : 0;
     } catch (e) {
-      debugPrint('❌ Error deleting reclamation: $e');
+      debugPrint('Error deleting reclamation: $e');
       rethrow;
     }
   }
 
   // Clear all reclamations (for testing)
   Future<void> clearAllReclamations() async {
-    final db = await database;
+    if (!_isInitialized) await init();
     
     try {
-      await db.delete(tableReclamations);
-      debugPrint('✅ All reclamations cleared successfully');
+      final keys = _prefs.getKeys()
+          .where((key) => key.startsWith('$tableReclamations-'))
+          .toList();
+      
+      for (final key in keys) {
+        await _prefs.remove(key);
+      }
+      
+      debugPrint('All reclamations cleared successfully');
     } catch (e) {
-      debugPrint('❌ Error clearing reclamations: $e');
+      debugPrint('Error clearing reclamations: $e');
       rethrow;
     }
   }

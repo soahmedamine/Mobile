@@ -45,26 +45,6 @@ class DatabaseHelper {
     }
   }
 
-  // Insert a new reclamation
-  Future<int> insertReclamation(Map<String, dynamic> reclamation) async {
-    if (!_isInitialized) await init();
-    
-    try {
-      final id = DateTime.now().millisecondsSinceEpoch.toString();
-      reclamation[columnId] = id;
-      reclamation[columnDate] = DateTime.now().toIso8601String();
-      reclamation[columnStatus] = reclamation[columnStatus] ?? 'new';
-      reclamation[columnResponse] = reclamation[columnResponse] ?? '';
-      
-      final key = '$tableReclamations-$id';
-      await _prefs.setString(key, jsonEncode(reclamation));
-      return 1; // Success
-    } catch (e) {
-      debugPrint('Error inserting reclamation: $e');
-      rethrow;
-    }
-  }
-
   // Get all reclamations
   Future<List<Map<String, dynamic>>> getReclamations() async {
     if (!_isInitialized) await init();
@@ -171,6 +151,45 @@ class DatabaseHelper {
       debugPrint('All reclamations cleared successfully');
     } catch (e) {
       debugPrint('Error clearing reclamations: $e');
+      rethrow;
+    }
+  }
+
+  // Insert a new reclamation
+  Future<int> insert(Map<String, dynamic> reclamation) async {
+    if (!_isInitialized) await init();
+    
+    try {
+      final id = DateTime.now().millisecondsSinceEpoch.toString();
+      reclamation[columnId] = id;
+      reclamation[columnDate] = DateTime.now().toIso8601String();
+      reclamation[columnStatus] = reclamation[columnStatus] ?? 'new';
+      reclamation[columnResponse] = reclamation[columnResponse] ?? '';
+      
+      final key = '$tableReclamations-$id';
+      await _prefs.setString(key, jsonEncode(reclamation));
+      return 1; // Success
+    } catch (e) {
+      debugPrint('Error inserting reclamation: $e');
+      rethrow;
+    }
+  }
+
+  // Print all reclamations (for debugging)
+  Future<void> printAllReclamations() async {
+    if (!_isInitialized) await init();
+    
+    try {
+      final reclamations = await getReclamations();
+      for (final rec in reclamations) {
+        debugPrint('ID: ${rec[columnId] ?? 'N/A'}');
+        debugPrint('Subject: ${rec[columnSubject] ?? 'N/A'}');
+        debugPrint('Status: ${rec[columnStatus] ?? 'N/A'}');
+        debugPrint('Date: ${rec[columnDate] ?? 'N/A'}');
+        debugPrint('---');
+      }
+    } catch (e) {
+      debugPrint('Error printing reclamations: $e');
       rethrow;
     }
   }

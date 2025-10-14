@@ -240,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'User: youssefoueslati54@gmail.com / user123',
+                          'User: youssefouesalti54@gmail.com / user123',
                           style: TextStyle(fontSize: 12),
                           textAlign: TextAlign.center,
                         ),

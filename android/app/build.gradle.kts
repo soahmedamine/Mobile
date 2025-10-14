@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "com.example.smart_travel_weather_app"
     compileSdk = 36
-    ndkVersion = "25.1.8937393"
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

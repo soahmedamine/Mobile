@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import '../models/logement.dart';
 import '../services/logement_service.dart';
 import '../services/image_service.dart';
+import '../widgets/app_drawer.dart';
 import 'logement_detail_screen.dart';
 import 'logement_form_screen.dart';
 
@@ -80,6 +81,7 @@ class _LogementListScreenState extends State<LogementListScreen> {
           ),
         ],
       ),
+      drawer: const AppDrawer(),
       body: Column(
         children: [
           // Barre de recherche

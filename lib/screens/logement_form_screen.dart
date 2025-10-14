@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../models/logement.dart';
 import '../services/logement_service.dart';
 import '../services/image_service.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/location_picker_widget.dart';
 
 class LogementFormScreen extends StatefulWidget {
@@ -259,6 +260,7 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
           ),
         ],
       ),
+      drawer: const AppDrawer(),
       body: Form(
         key: _formKey,
         child: ListView(
