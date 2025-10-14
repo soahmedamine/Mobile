@@ -4,7 +4,7 @@ class Place {
   final String address;
   final double latitude;
   final double longitude;
-  final String type; // restaurant, hotel, attraction, etc.
+  final String type;
   final double? price;
   final int tripId;
   final DateTime visitDate;

@@ -1,12 +1,12 @@
 class Trip {
-  String? id;
-  String title;
-  String destination;
-  DateTime startDate;
-  DateTime endDate;
-  double budget;
-  String? imageUrl;
-  List<String> interests;
+  final int? id;
+  final String title;
+  final String destination;
+  final DateTime startDate;
+  final DateTime endDate;
+  final double budget;
+  final String? description;
+  final DateTime createdAt;
 
   Trip({
     this.id,
@@ -15,49 +15,55 @@ class Trip {
     required this.startDate,
     required this.endDate,
     required this.budget,
-    this.imageUrl,
-    this.interests = const [],
+    this.description,
+    required this.createdAt,
   });
 
-  // Convertir en Map pour SharedPreferences
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
       'destination': destination,
-      'start_date': startDate.toIso8601String(),
-      'end_date': endDate.toIso8601String(),
+      'startDate': startDate.millisecondsSinceEpoch,
+      'endDate': endDate.millisecondsSinceEpoch,
       'budget': budget,
-      'image_url': imageUrl,
-      'interests': interests,
+      'description': description,
+      'createdAt': createdAt.millisecondsSinceEpoch,
     };
   }
 
-  // Créer depuis Map SharedPreferences
   factory Trip.fromMap(Map<String, dynamic> map) {
     return Trip(
       id: map['id'],
       title: map['title'],
       destination: map['destination'],
-      startDate: DateTime.parse(map['start_date']),
-      endDate: DateTime.parse(map['end_date']),
-      budget: map['budget']?.toDouble() ?? 0.0,
-      imageUrl: map['image_url'],
-      interests: List<String>.from(map['interests'] ?? []),
+      startDate: DateTime.fromMillisecondsSinceEpoch(map['startDate']),
+      endDate: DateTime.fromMillisecondsSinceEpoch(map['endDate']),
+      budget: map['budget']?.toDouble(),
+      description: map['description'],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt']),
     );
   }
 
-  // Getters pour l'affichage
-  String get duration {
-    final days = endDate.difference(startDate).inDays;
-    return '$days jour${days > 1 ? 's' : ''}';
-  }
-
-  String get dateRange {
-    return '${_formatDate(startDate)} - ${_formatDate(endDate)}';
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  Trip copyWith({
+    int? id,
+    String? title,
+    String? destination,
+    DateTime? startDate,
+    DateTime? endDate,
+    double? budget,
+    String? description,
+    DateTime? createdAt,
+  }) {
+    return Trip(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      destination: destination ?? this.destination,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      budget: budget ?? this.budget,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+    );
   }
 }

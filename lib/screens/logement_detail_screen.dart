@@ -273,7 +273,7 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
                               zoom: 15,
                               width: 600,
                               height: 400,
-                            ),
+                            ) as String,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) => Container(
                               color: Colors.grey[200],

@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'database/database_helper_new.dart' as db_helper;
+import 'modules/trip_management/screens/TripListScreen.dart';
+import 'modules/trip_management/screens/create_trip_screen.dart';
 import 'services/logement_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/reclamation_form_screen.dart';
@@ -14,6 +16,7 @@ import 'screens/view_reclamations_screen.dart';
 import 'providers/city_provider.dart';
 import 'screens/chat_screen_new.dart';
 import 'screens/culture_module_screen.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -103,6 +106,13 @@ class MyApp extends StatelessWidget {
         '/admin': (context) => const ReclamationListScreen(),
         '/view': (context) => const ViewReclamationsScreen(),
         '/culture': (context) => const CultureModuleScreen(),
+
+        //trajectoire
+
+        // AJOUTEZ CES ROUTES POUR TRIP MANAGEMENT :
+        '/trips': (context) => const TripListScreen(),           // NOUVELLE ROUTE
+        '/create-trip': (context) => const CreateTripScreen(),
+        // '/edit-trip' et '/trip-detail' nécessitent des paramètres
       },
     );
   }

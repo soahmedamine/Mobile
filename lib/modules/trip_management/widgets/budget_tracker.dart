@@ -3,32 +3,25 @@ import '../../../models/expense_model.dart';
 
 class BudgetTracker extends StatelessWidget {
   final double totalBudget;
-  final List<Expense> expenses;
+  final double totalExpenses;
   final VoidCallback onAddExpense;
 
   const BudgetTracker({
     Key? key,
     required this.totalBudget,
-    required this.expenses,
-    required this.onAddExpense,
+    required this.totalExpenses,
+    required this.onAddExpense, required List expenses,
   }) : super(key: key);
 
-  double get totalExpenses {
-    return expenses.fold(0, (sum, expense) => sum + expense.amount);
-  }
-
-  double get remainingBudget {
-    return totalBudget - totalExpenses;
-  }
-
-  double get progressPercentage {
-    return totalBudget > 0 ? (totalExpenses / totalBudget) : 0;
-  }
+  double get remainingBudget => totalBudget - totalExpenses;
+  double get progressPercentage => totalBudget > 0 ? (totalExpenses / totalBudget) : 0;
+  bool get isOverBudget => remainingBudget < 0;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.all(16),
+      elevation: 3,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -38,44 +31,108 @@ class BudgetTracker extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Budget Tracker',
+                  'Suivi du Budget',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add, color: Colors.blue),
+                  icon: const Icon(Icons.add_chart, color: Colors.blue),
                   onPressed: onAddExpense,
+                  tooltip: 'Ajouter une dépense',
                 ),
               ],
             ),
             const SizedBox(height: 16),
+
+            // Progress Bar
             LinearProgressIndicator(
-              value: progressPercentage,
+              value: progressPercentage > 1 ? 1 : progressPercentage,
               backgroundColor: Colors.grey[300],
               valueColor: AlwaysStoppedAnimation<Color>(
-                progressPercentage > 0.8 ? Colors.red : Colors.green,
+                isOverBudget ? Colors.red :
+                progressPercentage > 0.8 ? Colors.orange : Colors.green,
               ),
+              minHeight: 12,
+              borderRadius: BorderRadius.circular(6),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+
+            // Progress Text
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildBudgetItem('Total Budget', '\$${totalBudget.toStringAsFixed(2)}', Colors.blue),
-                _buildBudgetItem('Spent', '\$${totalExpenses.toStringAsFixed(2)}', Colors.orange),
-                _buildBudgetItem('Remaining', '\$${remainingBudget.toStringAsFixed(2)}',
-                    remainingBudget >= 0 ? Colors.green : Colors.red),
+                Text(
+                  '${(progressPercentage * 100).toStringAsFixed(1)}% utilisé',
+                  style: TextStyle(
+                    color: isOverBudget ? Colors.red : Colors.grey[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (isOverBudget)
+                  Text(
+                    'Dépassement!',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 16),
-            if (expenses.isNotEmpty) ...[
-              const Text(
-                'Recent Expenses:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+
+            // Budget Numbers
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildBudgetItem(
+                  'Budget Total',
+                  '\$${totalBudget.toStringAsFixed(2)}',
+                  Colors.blue,
+                  Icons.account_balance_wallet,
+                ),
+                _buildBudgetItem(
+                  'Dépensé',
+                  '\$${totalExpenses.toStringAsFixed(2)}',
+                  Colors.orange,
+                  Icons.money_off,
+                ),
+                _buildBudgetItem(
+                  'Reste',
+                  '\$${remainingBudget.abs().toStringAsFixed(2)}',
+                  isOverBudget ? Colors.red : Colors.green,
+                  isOverBudget ? Icons.warning : Icons.savings,
+                ),
+              ],
+            ),
+
+            // Warning Message
+            if (isOverBudget) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Attention! Vous avez dépassé votre budget de \$${remainingBudget.abs().toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              ...expenses.take(3).map((expense) => _buildExpenseItem(expense)),
             ],
           ],
         ),
@@ -83,12 +140,16 @@ class BudgetTracker extends StatelessWidget {
     );
   }
 
-  Widget _buildBudgetItem(String label, String value, Color color) {
+  Widget _buildBudgetItem(String label, String value, Color color, IconData icon) {
     return Column(
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(height: 4),
         Text(
@@ -99,20 +160,15 @@ class BudgetTracker extends StatelessWidget {
             color: color,
           ),
         ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+          ),
+          textAlign: TextAlign.center,
+        ),
       ],
-    );
-  }
-
-  Widget _buildExpenseItem(Expense expense) {
-    return ListTile(
-      leading: const Icon(Icons.money_off, color: Colors.red),
-      title: Text(expense.description),
-      subtitle: Text(expense.category),
-      trailing: Text(
-        '\$${expense.amount.toStringAsFixed(2)}',
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      dense: true,
     );
   }
 }

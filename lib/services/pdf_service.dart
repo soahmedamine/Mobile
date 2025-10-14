@@ -6,6 +6,8 @@ import '../models/travel.dart';
 class PdfService {
   final pdf = pw.Document();
 
+  get Printing => null;
+
   Future<void> generateTravelPdf(Travel travel) async {
     pdf.addPage(
       pw.Page(

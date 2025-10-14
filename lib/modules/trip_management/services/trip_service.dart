@@ -1,17 +1,17 @@
 import '../../../models/trip_model.dart';
 import '../../../models/place_model.dart';
 import '../../../models/expense_model.dart';
-import '../../../database/database_helper.dart';
+import '../../../database/trip_database_helper.dart';
 
 class TripService {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final TripDatabaseHelper _dbHelper = TripDatabaseHelper();
 
   // Trip CRUD operations
   Future<int> createTrip(Trip trip) async {
     return await _dbHelper.insert('trips', trip.toMap());
   }
 
-  Future<List<Trip>> getAllTrip() async {
+  Future<List<Trip>> getAllTrips() async {
     final List<Map<String, dynamic>> tripsData = await _dbHelper.getAll('trips');
     return tripsData.map((data) => Trip.fromMap(data)).toList();
   }
