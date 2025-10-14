@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../database/database_helper.dart';
+import '../database/database_helper_new.dart';
 
 class ReclamationDetailScreen extends StatelessWidget {
   final Map<String, dynamic> reclamation;
@@ -51,14 +52,12 @@ class ReclamationDetailScreen extends StatelessWidget {
         title: const Text('Reclamation Details'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.refresh),
             onPressed: () {
-              // Edit functionality will be implemented in a future update
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edit functionality coming soon')),
-              );
+              // Trigger a rebuild by popping and pushing
+              Navigator.pop(context);
             },
-            tooltip: 'Edit Reclamation',
+            tooltip: 'Refresh',
           ),
         ],
       ),
@@ -109,8 +108,35 @@ class ReclamationDetailScreen extends StatelessWidget {
               style: theme.textTheme.bodyLarge,
             ),
             
+            // Attachment (if exists)
+            if (reclamation[DatabaseHelper.columnAttachment] != null &&
+                reclamation[DatabaseHelper.columnAttachment].toString().isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Pièce jointe',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 300),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    base64Decode(reclamation[DatabaseHelper.columnAttachment]),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ],
+            
             // Response (if exists)
-            if (response.isNotEmpty && response != 'No response yet') ...[
+            if (response.isNotEmpty && response != 'No response yet' && response != '') ...[
               const SizedBox(height: 24),
               Text(
                 'Response',

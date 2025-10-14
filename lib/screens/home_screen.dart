@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'weather_screen.dart';
 import 'travel_screen.dart';
+import 'view_reclamations_screen.dart';
 import '../widgets/app_drawer.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -74,6 +75,33 @@ class HomeScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const TravelScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Bouton Gérer les réclamations
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.assignment, size: 28),
+                label: const Text(
+                  "Gérer les réclamations",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[700],
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ViewReclamationsScreen(),
+                    ),
                   );
                 },
               ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import '../database/database_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../database/database_helper_new.dart';
 import 'reclamation_detail_screen.dart';
 import 'reclamation_form_screen.dart';
 import '../widgets/app_drawer.dart';
@@ -10,10 +12,10 @@ class ViewReclamationsScreen extends StatefulWidget {
   const ViewReclamationsScreen({super.key});
 
   @override
-  ViewReclamationsScreenState createState() => ViewReclamationsScreenState();
+  State<ViewReclamationsScreen> createState() => _ViewReclamationsScreenState();
 }
 
-class ViewReclamationsScreenState extends State<ViewReclamationsScreen> {
+class _ViewReclamationsScreenState extends State<ViewReclamationsScreen> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   List<Map<String, dynamic>> _reclamations = [];
   bool _isLoading = true;
@@ -41,10 +43,24 @@ class ViewReclamationsScreenState extends State<ViewReclamationsScreen> {
     setState(() => _isLoading = true);
     
     try {
+      // Ensure database is initialized
+      if (!_dbHelper.isInitialized) {
+        await _dbHelper.init();
+      }
+      
+      // Print all stored keys for debugging
+      final prefs = await SharedPreferences.getInstance();
+      final allKeys = prefs.getKeys();
+      print('All keys in SharedPreferences: $allKeys');
+      
+      // Get all reclamations
       final reclamations = await _dbHelper.getReclamations();
       
       if (kDebugMode) {
         print('Successfully loaded ${reclamations.length} reclamations');
+        for (var r in reclamations) {
+          print('Reclamation: ${r['id']} - ${r['subject']} - Status: ${r['status']}');
+        }
       }
       
       if (mounted) {
@@ -54,11 +70,9 @@ class ViewReclamationsScreenState extends State<ViewReclamationsScreen> {
       }
     } catch (e, stackTrace) {
       final error = 'Failed to load reclamations: $e\n$stackTrace';
-      if (kDebugMode) {
-        print(error);
-      }
+      print(error);
       if (mounted) {
-        _showError(error);
+        _showError('Failed to load reclamations. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -92,6 +106,33 @@ class ViewReclamationsScreenState extends State<ViewReclamationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(
+                Icons.menu,
+                size: 28,
+                color: Colors.indigo,
+              ),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+              tooltip: 'Menu',
+            ),
+          ),
+        ),
         title: const Text('All Reclamations'),
         actions: [
           IconButton(

@@ -9,6 +9,7 @@ import '../screens/view_reclamations_screen.dart';
 import '../screens/chat_screen_new.dart';
 import '../screens/logement_list_screen.dart';
 import '../screens/culture_module_screen.dart';
+import '../screens/budget_screen.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
@@ -126,6 +127,13 @@ class _AppDrawerState extends State<AppDrawer> {
               leading: const Icon(Icons.hotel, color: Colors.deepOrange),
               title: const Text('Logements'),
               onTap: () => _navigateTo(const LogementListScreen()),
+            ),
+            const Divider(height: 1),
+
+            ListTile(
+              leading: const Icon(Icons.account_balance_wallet, color: Colors.teal),
+              title: const Text('Budget'),
+              onTap: () => _navigateTo(const BudgetScreen(travelId: 'default_travel')),
             ),
             const Divider(height: 1),
 
