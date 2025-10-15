@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'database/database_helper_new.dart' as db_helper;
 import 'modules/trip_management/screens/TripListScreen.dart';
@@ -17,19 +18,26 @@ import 'providers/city_provider.dart';
 import 'screens/chat_screen_new.dart';
 import 'screens/culture_module_screen.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
-    // Load environment variables
+    // ✅ Initialisation de sqflite pour Windows / macOS / Linux
+    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS)) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
+    // Charger les variables d'environnement
     await dotenv.load(fileName: ".env");
 
-    // Initialize the database
+    // Initialiser la base principale
     final dbHelper = db_helper.DatabaseHelper();
     await dbHelper.init();
-    
-    // Initialize logement database
+
+    // Initialiser la base logement
     final logementService = LogementService();
     await logementService.database;
 
@@ -49,9 +57,9 @@ Future<void> main() async {
 
 class ErrorApp extends StatelessWidget {
   final String error;
-  
+
   const ErrorApp({super.key, required this.error});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -106,13 +114,8 @@ class MyApp extends StatelessWidget {
         '/admin': (context) => const ReclamationListScreen(),
         '/view': (context) => const ViewReclamationsScreen(),
         '/culture': (context) => const CultureModuleScreen(),
-
-        //trajectoire
-
-        // AJOUTEZ CES ROUTES POUR TRIP MANAGEMENT :
-        '/trips': (context) => const TripListScreen(),           // NOUVELLE ROUTE
+        '/trips': (context) => const TripListScreen(),
         '/create-trip': (context) => const CreateTripScreen(),
-        // '/edit-trip' et '/trip-detail' nécessitent des paramètres
       },
     );
   }
@@ -212,10 +215,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
-  // Callback for successful login
   void _onLoginSuccess() {
     if (mounted) {
-      // Recheck auth status after successful login
       _checkAuthStatus();
     }
   }
@@ -224,9 +225,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -234,7 +233,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return LoginScreen(onLoginSuccess: _onLoginSuccess);
     }
 
-    // Redirect based on role
     if (_userRole == 'admin') {
       return const ReclamationListScreen();
     } else {

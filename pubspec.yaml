@@ -22,6 +22,8 @@ dependencies:
   image_picker: ^1.0.4
   sqflite_common_ffi: ^2.3.2   # ✅ ajouté pour desktop/web support
   # RETIRER sqflite_common_ffi_web - on va gérer web/mobile différemment
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

@@ -40,9 +40,27 @@ class MapsService {
       } else {
         throw 'Erreur API: ${response.statusCode} - ${response.body}';
       }
+
     } catch (e) {
       throw 'Erreur de connexion: $e';
     }
+  }
+
+  // GET directions (faster URL form): returns decoded JSON
+  Future<Map<String, dynamic>> getDirectionsGet(
+      double startLat,
+      double startLng,
+      double endLat,
+      double endLng,
+      String profile,
+      {Duration timeout = const Duration(seconds: 8)}) async {
+    final url = Uri.parse(
+        'https://api.openrouteservice.org/v2/directions/$profile?api_key=$_openRouteServiceApiKey&start=$startLng,$startLat&end=$endLng,$endLat');
+    final resp = await http.get(url).timeout(timeout);
+    if (resp.statusCode == 200) {
+      return jsonDecode(resp.body);
+    }
+    throw 'Erreur API GET: ${resp.statusCode} - ${resp.body}';
   }
 
   // Ouvrir dans OpenStreetMap (version simplifiée)
@@ -64,7 +82,14 @@ class MapsService {
       double endLng,
       String profile
       ) async {
-    final directions = await getDirections(startLat, startLng, endLat, endLng, profile);
+    Map<String, dynamic> directions;
+    try {
+      // Try fast GET first
+      directions = await getDirectionsGet(startLat, startLng, endLat, endLng, profile);
+    } catch (_) {
+      // Fallback to POST JSON
+      directions = await getDirections(startLat, startLng, endLat, endLng, profile);
+    }
 
     if (directions['features'] != null && directions['features'].isNotEmpty) {
       final feature = directions['features'][0];
@@ -80,6 +105,29 @@ class MapsService {
     }
 
     throw 'Aucun itinéraire trouvé';
+  }
+
+  // High-level: returns list of [lon, lat] route coordinates. Falls back to straight line if routing fails.
+  Future<List<List<double>>> getRouteCoordinatesOrFallback(
+      double startLat,
+      double startLng,
+      double endLat,
+      double endLng,
+      String profile) async {
+    try {
+      final info = await getRouteInfo(startLat, startLng, endLat, endLng, profile);
+      final coords = (info['coordinates'] as List<dynamic>)
+          .map<List<double>>((e) => [(e[0] as num).toDouble(), (e[1] as num).toDouble()])
+          .toList();
+      if (coords.length >= 2) return coords;
+    } catch (_) {
+      // ignore and fallback
+    }
+    // Straight line fallback [lon, lat]
+    return [
+      [startLng, startLat],
+      [endLng, endLat],
+    ];
   }
 
   // Calculer la distance entre deux points (formule de Haversine) - VERSION CORRIGÉE
@@ -167,5 +215,25 @@ class MapsService {
 
   Type getStaticMapUrl(double latitude, double longitude, {required int zoom, required int width, required int height}) {
   return Null;
+  }
+
+  // Geocode a place name to coordinates (lat, lon) using OpenRouteService
+  Future<Map<String, double>> geocode(String text) async {
+    final url = Uri.parse(
+        'https://api.openrouteservice.org/geocode/search?api_key=$_openRouteServiceApiKey&text=${Uri.encodeComponent(text)}');
+
+    final response = await http.get(url);
+    if (response.statusCode != 200) {
+      throw 'Erreur geocoding: ${response.statusCode} - ${response.body}';
+    }
+    final data = jsonDecode(response.body);
+    if (data['features'] == null || data['features'].isEmpty) {
+      throw 'Aucun résultat pour "$text"';
+    }
+    final coords = data['features'][0]['geometry']['coordinates']; // [lon, lat]
+    return {
+      'lat': (coords[1] as num).toDouble(),
+      'lon': (coords[0] as num).toDouble(),
+    };
   }
 }

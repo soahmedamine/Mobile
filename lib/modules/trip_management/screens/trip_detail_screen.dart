@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import '../../../models/trip_model.dart';
 import '../../../models/place_model.dart';
 import '../services/trip_service.dart';
@@ -8,15 +9,12 @@ import '../widgets/place_card.dart';
 import '../widgets/budget_tracker.dart';
 import 'map_explorer_screen.dart';
 import 'edit_trip_screen.dart';
+import '../../../services/maps_service.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
 
   const TripDetailScreen({Key? key, required this.trip}) : super(key: key);
-
-  get endDate => null;
-
-  get startDate => null;
 
   @override
   _TripDetailScreenState createState() => _TripDetailScreenState();
@@ -25,6 +23,7 @@ class TripDetailScreen extends StatefulWidget {
 class _TripDetailScreenState extends State<TripDetailScreen> {
   final TripService _tripService = TripService();
   final ItineraryService _itineraryService = ItineraryService();
+  final MapsService _mapsService = MapsService();
 
   List<Place> _places = [];
   List<Place> _expenses = [];
@@ -122,24 +121,178 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   void _addNewPlace() {
-    showDialog(
+    _showAddPlaceSheet();
+  }
+
+  void _showAddPlaceSheet() {
+    final formKey = GlobalKey<FormState>();
+    final nameCtrl = TextEditingController();
+    final addressCtrl = TextEditingController();
+    final typeCtrl = TextEditingController(text: 'attraction');
+    final priceCtrl = TextEditingController();
+    final latCtrl = TextEditingController();
+    final lngCtrl = TextEditingController();
+    DateTime visitDate = DateTime.now();
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ajouter un Lieu'),
-        content: const Text('Fonctionnalité à implémenter: formulaire d\'ajout de lieu.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+          ),
+          child: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Ajouter un Lieu', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Nom', border: OutlineInputBorder()),
+                    validator: (v) => (v == null || v.isEmpty) ? 'Nom requis' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: addressCtrl,
+                    decoration: const InputDecoration(labelText: 'Adresse', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: typeCtrl,
+                    decoration: const InputDecoration(labelText: 'Type (hotel, restaurant, attraction, ...)', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: latCtrl,
+                          decoration: const InputDecoration(labelText: 'Latitude', border: OutlineInputBorder()),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                          validator: (v) => (double.tryParse(v ?? '') == null) ? 'Latitude invalide' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: lngCtrl,
+                          decoration: const InputDecoration(labelText: 'Longitude', border: OutlineInputBorder()),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                          validator: (v) => (double.tryParse(v ?? '') == null) ? 'Longitude invalide' : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: priceCtrl,
+                    decoration: const InputDecoration(labelText: 'Prix (optionnel)', border: OutlineInputBorder(), prefixText: '\$'),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: visitDate,
+                        firstDate: widget.trip.startDate,
+                        lastDate: widget.trip.endDate,
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          visitDate = picked;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Date de visite',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.calendar_today),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(_formatDate(visitDate)),
+                          const Icon(Icons.arrow_drop_down),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.save),
+                      label: const Text('Enregistrer le Lieu'),
+                      onPressed: () async {
+                        if (!formKey.currentState!.validate()) return;
+                        double? lat = double.tryParse(latCtrl.text);
+                        double? lon = double.tryParse(lngCtrl.text);
+                        try {
+                          if ((lat == null || lon == null) && addressCtrl.text.isNotEmpty) {
+                            final geo = await _mapsService.geocode(addressCtrl.text);
+                            lat = geo['lat'];
+                            lon = geo['lon'];
+                          }
+                          if (lat == null || lon == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Veuillez fournir des coordonnées valides ou une adresse.')),
+                            );
+                            return;
+                          }
+
+                          final place = Place(
+                            name: nameCtrl.text,
+                            address: addressCtrl.text,
+                            latitude: lat,
+                            longitude: lon,
+                            type: typeCtrl.text,
+                            price: priceCtrl.text.isEmpty ? null : double.tryParse(priceCtrl.text),
+                            tripId: widget.trip.id!,
+                            visitDate: visitDate,
+                            rating: null,
+                            notes: null,
+                          );
+
+                          await _tripService.addPlace(place);
+                          if (!mounted) return;
+                          Navigator.of(ctx).pop();
+                          await _loadTripData();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lieu ajouté')),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erreur: $e')),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final daysDifference = widget.endDate.difference(widget.startDate).inDays;
+    final daysDifference = widget.trip.endDate.difference(widget.trip.startDate).inDays;
 
     return Scaffold(
       appBar: AppBar(
@@ -183,6 +336,18 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   if (widget.trip.description != null)
                     Text('Description: ${widget.trip.description}'),
                 ],
+              ),
+            ),
+          ),
+
+          // Embedded Map: Tunis -> Destination
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              height: 220,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: _buildRouteMap(widget.trip.destination),
               ),
             ),
           ),
@@ -286,5 +451,62 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  // Build a map showing route from Tunis (home) to the trip destination using ORS
+  Widget _buildRouteMap(String destination) {
+    const tunis = ll.LatLng(36.8065, 10.1815);
+    return FutureBuilder<Map<String, double>>(
+      future: _mapsService.geocode(destination),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snap.hasError || !snap.hasData) {
+          return const Center(child: Text('Carte indisponible'));
+        }
+        final dest = ll.LatLng(snap.data!['lat']!, snap.data!['lon']!);
+        return FutureBuilder<List<List<double>>>(
+          future: _mapsService.getRouteCoordinatesOrFallback(
+            tunis.latitude,
+            tunis.longitude,
+            dest.latitude,
+            dest.longitude,
+            'driving-car',
+          ),
+          builder: (context, routeSnap) {
+            final points = <ll.LatLng>[];
+            if (routeSnap.hasData) {
+              for (final c in routeSnap.data!) {
+                // [lon, lat]
+                points.add(ll.LatLng(c[1], c[0]));
+              }
+            }
+            return FlutterMap(
+              options: MapOptions(
+                initialCenter: ll.LatLng(
+                  (tunis.latitude + dest.latitude) / 2,
+                  (tunis.longitude + dest.longitude) / 2,
+                ),
+                initialZoom: 6,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c'],
+                  userAgentPackageName: 'com.example.smart_travel_weather_app',
+                ),
+                if (points.isNotEmpty)
+                  PolylineLayer(polylines: [Polyline(points: points, color: Colors.blue, strokeWidth: 4)]),
+                MarkerLayer(markers: [
+                  Marker(point: tunis, width: 40, height: 40, child: const Icon(Icons.home, color: Colors.green)),
+                  Marker(point: dest, width: 40, height: 40, child: const Icon(Icons.flag, color: Colors.red)),
+                ]),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }

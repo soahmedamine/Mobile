@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import '../../../models/trip_model.dart';
 import '../../../models/place_model.dart';
 import '../services/trip_service.dart';
-import '../widgets/free_map_widget.dart';
-import '../services/free_map_service.dart';
 
 class MapExplorerScreen extends StatefulWidget {
   final Trip trip;
@@ -23,8 +23,6 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   final TripService _tripService = TripService();
   List<Place> _places = [];
 
-  get FreeMapService => null;
-
   @override
   void initState() {
     super.initState();
@@ -33,7 +31,8 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final center = FreeMapService.getCenter(_places);
+    final center = _computeCenter(_places);
+    final points = _sortedPoints(_places);
 
     return Scaffold(
       appBar: AppBar(
@@ -41,15 +40,42 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
-      body: FreeMapWidget(
-        places: _places,
-        initialLatitude: center.latitude,
-        initialLongitude: center.longitude,
-        initialZoom: _places.isEmpty ? 10.0 : 12.0,
-        onTap: (latlng) {
-          _showAddPlaceDialog(latlng);
-        },
-      ),
+      body: _places.isEmpty
+          ? const Center(child: Text('Aucun lieu à afficher'))
+          : FlutterMap(
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: 12,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c'],
+                  userAgentPackageName: 'com.example.smart_travel_weather_app',
+                ),
+                if (points.length >= 2)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(points: points, color: Colors.blue, strokeWidth: 4),
+                    ],
+                  ),
+                MarkerLayer(
+                  markers: _places
+                      .map(
+                        (p) => Marker(
+                          point: ll.LatLng(p.latitude, p.longitude),
+                          width: 40,
+                          height: 40,
+                          child: Tooltip(
+                            message: '${p.name} (${p.type})',
+                            child: const Icon(Icons.place, color: Colors.red),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -59,31 +85,31 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             child: const Icon(Icons.add),
           ),
           const SizedBox(height: 16),
-          FloatingActionButton(
-            onPressed: _clearAllPlaces,
-            tooltip: 'Clear All Places',
-            backgroundColor: Colors.red,
-            child: const Icon(Icons.clear),
-          ),
+          if (_places.isNotEmpty)
+            FloatingActionButton(
+              onPressed: _clearAllPlaces,
+              tooltip: 'Clear All Places',
+              backgroundColor: Colors.red,
+              child: const Icon(Icons.clear),
+            ),
         ],
       ),
     );
   }
 
-  void _showAddPlaceDialog(LatLng position) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Place'),
-        content: const Text('Tap the + button to add sample places for testing.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  ll.LatLng _computeCenter(List<Place> places) {
+    if (places.isEmpty) return const ll.LatLng(0, 0);
+    double lat = 0, lng = 0;
+    for (final p in places) {
+      lat += p.latitude;
+      lng += p.longitude;
+    }
+    return ll.LatLng(lat / places.length, lng / places.length);
+  }
+
+  List<ll.LatLng> _sortedPoints(List<Place> places) {
+    final sorted = [...places]..sort((a, b) => a.visitDate.compareTo(b.visitDate));
+    return sorted.map((p) => ll.LatLng(p.latitude, p.longitude)).toList();
   }
 
   void _addSamplePlaces() {
@@ -132,9 +158,4 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       const SnackBar(content: Text('All places cleared!')),
     );
   }
-
-  Widget? FreeMapWidget({required List<Place> places, required initialLatitude, required initialLongitude, required double initialZoom, required Null Function(dynamic latlng) onTap}) {}
-}
-
-class LatLng {
 }

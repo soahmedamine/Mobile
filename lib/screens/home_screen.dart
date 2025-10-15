@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'weather_screen.dart';
 import 'travel_screen.dart';
 import '../widgets/app_drawer.dart';
+import '../modules/trip_management/screens/TripListScreen.dart';
+import '../modules/trip_management/screens/create_trip_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -74,6 +76,81 @@ class HomeScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const TravelScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Bouton: Voir la liste des voyages
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.list_alt, size: 28),
+                label: const Text(
+                  "Mes voyages",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const TripListScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Bouton: Créer un nouveau voyage
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.add_location_alt, size: 28),
+                label: const Text(
+                  "Créer un voyage",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CreateTripScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Bouton: Carte (Map)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.map, size: 28),
+                label: const Text(
+                  "Explorer la carte",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const TripListScreen()),
                   );
                 },
               ),

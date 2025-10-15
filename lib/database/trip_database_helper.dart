@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 
 class TripDatabaseHelper {
@@ -10,6 +12,13 @@ class TripDatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
+
+    // ✅ Desktop (Windows/Linux/macOS) support
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
     _database = await _initDatabase();
     return _database!;
   }
@@ -71,16 +80,11 @@ class TripDatabaseHelper {
     ''');
 
     // Index pour améliorer les performances
-    await db.execute('''
-      CREATE INDEX idx_places_trip_id ON places(tripId)
-    ''');
-
-    await db.execute('''
-      CREATE INDEX idx_expenses_trip_id ON expenses(tripId)
-    ''');
+    await db.execute('CREATE INDEX idx_places_trip_id ON places(tripId)');
+    await db.execute('CREATE INDEX idx_expenses_trip_id ON expenses(tripId)');
   }
 
-  // Generic CRUD operations
+  // --- 🔹 CRUD GÉNÉRIQUES ---
   Future<int> insert(String table, Map<String, dynamic> data) async {
     final db = await database;
     return await db.insert(table, data);
@@ -95,20 +99,17 @@ class TripDatabaseHelper {
       String tableName, String where, List<dynamic> whereArgs) async {
     final db = await database;
     return await db.query(
-        tableName,
-        where: where,
-        whereArgs: whereArgs,
-        orderBy: 'id DESC'
+      tableName,
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: 'id DESC',
     );
   }
 
   Future<Map<String, dynamic>?> getById(String tableName, int id) async {
     final db = await database;
-    final results = await db.query(
-      tableName,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final results =
+    await db.query(tableName, where: 'id = ?', whereArgs: [id]);
     return results.isNotEmpty ? results.first : null;
   }
 
@@ -131,7 +132,7 @@ class TripDatabaseHelper {
     );
   }
 
-  // Trip-specific methods
+  // --- 🔹 SPÉCIFIQUE AUX TRIPS ---
   Future<List<Map<String, dynamic>>> getTripPlaces(int tripId) async {
     return await getByCondition('places', 'tripId = ?', [tripId]);
   }
@@ -146,42 +147,45 @@ class TripDatabaseHelper {
       'SELECT SUM(amount) as total FROM expenses WHERE tripId = ?',
       [tripId],
     );
-    return result.first['total']?.toDouble() ?? 0.0;
+    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
-  // Statistics methods
+  // --- 🔹 STATISTIQUES ---
   Future<int> getTotalTripsCount() async {
     final db = await database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM trips');
-    return result.first['count'] as int;
+    return (result.first['count'] as int?) ?? 0;
   }
 
   Future<int> getTotalPlacesCount() async {
     final db = await database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM places');
-    return result.first['count'] as int;
+    return (result.first['count'] as int?) ?? 0;
   }
 
   Future<double> getTotalBudget() async {
     final db = await database;
     final result = await db.rawQuery('SELECT SUM(budget) as total FROM trips');
-    return result.first['total']?.toDouble() ?? 0.0;
+    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
-  // Cleanup methods
+  // --- 🔹 NETTOYAGE / RESET ---
   Future<void> close() async {
     final db = await database;
     await db.close();
+    _database = null;
   }
 
-  Future<void> deleteDatabase(String path) async {
+  Future<void> clearDatabase() async {
     final db = await database;
-    final path = join(await getDatabasesPath(), 'trip_planner.db');
-    await db.close();
-    await deleteDatabase(path);
+    await db.delete('expenses');
+    await db.delete('places');
+    await db.delete('trips');
   }
-}
 
-extension on Object? {
-  toDouble() {}
+  Future<void> deleteLocalDatabase() async {
+    final dbPath = join(await getDatabasesPath(), 'trip_planner.db');
+    await deleteDatabase(dbPath);
+    _database = null;
+  }
 }
