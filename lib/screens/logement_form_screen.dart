@@ -250,22 +250,40 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(widget.logement == null ? 'Ajouter un logement' : 'Modifier le logement'),
-        backgroundColor: Colors.teal,
+        title: Text(
+          widget.logement == null ? 'Ajouter un logement' : 'Modifier le logement',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
+            icon: const Icon(Icons.save, color: Colors.white),
             onPressed: _saveLogement,
           ),
         ],
       ),
       drawer: const AppDrawer(),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.blue[800]!, Colors.blue[500]!, Colors.blue[200]!],
+          ),
+        ),
+        child: SafeArea(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
             // Type
             const Text(
               'Type de logement',
@@ -580,6 +598,8 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
               ),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );
