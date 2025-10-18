@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/travel_service.dart';
 import '../models/travel.dart';
 import '../services/pdf_service.dart';
+import 'home_screen.dart';
 import '../widgets/app_drawer.dart';
 
 class TravelScreen extends StatefulWidget {
@@ -77,20 +78,48 @@ class _TravelScreenState extends State<TravelScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Edit Travel'),
+              title: const Text(
+                'Edit Travel',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
                       controller: destController,
-                      decoration: const InputDecoration(labelText: 'Destination'),
+                      decoration: InputDecoration(
+                        labelText: 'Destination',
+                        prefixIcon: const Icon(Icons.location_on, color: Colors.blue),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: descController,
-                      decoration: const InputDecoration(labelText: 'Description'),
+                      decoration: InputDecoration(
+                        labelText: 'Description',
+                        prefixIcon: const Icon(Icons.description, color: Colors.blue),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
@@ -107,13 +136,18 @@ class _TravelScreenState extends State<TravelScreen> {
                               }
                             },
                             child: InputDecorator(
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: 'Date de départ',
+                                prefixIcon: const Icon(Icons.calendar_today, color: Colors.blue, size: 20),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                               child: Text(
                                 editDateDepart != null
                                     ? "${editDateDepart!.day}/${editDateDepart!.month}/${editDateDepart!.year}"
                                     : 'Select Date',
+                                style: const TextStyle(fontSize: 14),
                               ),
                             ),
                           ),
@@ -133,49 +167,104 @@ class _TravelScreenState extends State<TravelScreen> {
                               }
                             },
                             child: InputDecorator(
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: 'Date de retour',
+                                prefixIcon: const Icon(Icons.calendar_today, color: Colors.blue, size: 20),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                               child: Text(
                                 editDateRetour != null
                                     ? "${editDateRetour!.day}/${editDateRetour!.month}/${editDateRetour!.year}"
                                     : 'Select Date',
+                                style: const TextStyle(fontSize: 14),
                               ),
                             ),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: prixController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Prix'),
+                      decoration: InputDecoration(
+                        labelText: 'Prix (DT)',
+                        prefixIcon: const Icon(Icons.attach_money, color: Colors.blue),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: placesController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Places disponibles'),
+                      decoration: InputDecoration(
+                        labelText: 'Places disponibles',
+                        prefixIcon: const Icon(Icons.event_seat, color: Colors.blue),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: transportController,
-                      decoration: const InputDecoration(labelText: 'Transport'),
+                      decoration: InputDecoration(
+                        labelText: 'Transport',
+                        prefixIcon: const Icon(Icons.directions_bus, color: Colors.blue),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: hebergementController,
-                      decoration: const InputDecoration(labelText: 'Hébergement'),
+                      decoration: InputDecoration(
+                        labelText: 'Hébergement',
+                        prefixIcon: const Icon(Icons.hotel, color: Colors.blue),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
               actions: <Widget>[
                 TextButton(
-                  child: const Text('Cancel'),
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey[700],
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(fontSize: 16),
+                  ),
                 ),
                 ElevatedButton(
-                  child: const Text('Save'),
                   onPressed: () async {
                     if (destController.text.isEmpty ||
                         descController.text.isEmpty ||
@@ -208,6 +297,16 @@ class _TravelScreenState extends State<TravelScreen> {
                     if (!mounted) return;
                     Navigator.of(context).pop();
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    elevation: 2,
+                  ),
+                  child: const Text(
+                    'Save',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             );
@@ -238,161 +337,278 @@ class _TravelScreenState extends State<TravelScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.blue[800]!, Colors.blue[500]!, Colors.blue[200]!],
+            ),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          ),
         ),
       );
     }
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Smart Travel'),
-        backgroundColor: Colors.teal,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          },
+          tooltip: 'Back to Home',
+        ),
+        title: const Text(
+          'Smart Travel',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         centerTitle: true,
       ),
       drawer: const AppDrawer(),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            children: [
-              // Formulaire
-              Card(
-                color: Colors.blue[50],
-                elevation: 5,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: destController,
-                        decoration: const InputDecoration(
-                          labelText: 'Destination',
-                          prefixIcon: Icon(Icons.location_on, color: Colors.teal),
-                        ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.blue[800]!, Colors.blue[500]!, Colors.blue[200]!],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  // Formulaire
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1.5,
                       ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: descController,
-                        decoration: const InputDecoration(
-                          labelText: 'Description',
-                          prefixIcon: Icon(Icons.description, color: Colors.teal),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
                         children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => pickDate(context, true),
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                  labelText: 'Date de départ',
-                                  prefixIcon: Icon(Icons.calendar_today, color: Colors.teal),
-                                ),
-                                child: Text(
-                                  dateDepart != null
-                                      ? "${dateDepart!.day}/${dateDepart!.month}/${dateDepart!.year}"
-                                      : 'Choisir une date',
-                                ),
+                          TextField(
+                            controller: destController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              labelText: 'Destination',
+                              labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                              prefixIcon: const Icon(Icons.location_on, color: Colors.white),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white, width: 2),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => pickDate(context, false),
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                  labelText: 'Date de retour',
-                                  prefixIcon: Icon(Icons.calendar_today, color: Colors.teal),
-                                ),
-                                child: Text(
-                                  dateRetour != null
-                                      ? "${dateRetour!.day}/${dateRetour!.month}/${dateRetour!.year}"
-                                      : 'Choisir une date',
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: descController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              labelText: 'Description',
+                              labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                              prefixIcon: const Icon(Icons.description, color: Colors.white),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => pickDate(context, true),
+                                  child: InputDecorator(
+                                    decoration: InputDecoration(
+                                      labelText: 'Date de départ',
+                                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                                      prefixIcon: const Icon(Icons.calendar_today, color: Colors.white),
+                                      enabledBorder: UnderlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      dateDepart != null
+                                          ? "${dateDepart!.day}/${dateDepart!.month}/${dateDepart!.year}"
+                                          : 'Choisir une date',
+                                      style: TextStyle(color: Colors.white.withOpacity(0.9)),
+                                    ),
+                                  ),
                                 ),
                               ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => pickDate(context, false),
+                                  child: InputDecorator(
+                                    decoration: InputDecoration(
+                                      labelText: 'Date de retour',
+                                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                                      prefixIcon: const Icon(Icons.calendar_today, color: Colors.white),
+                                      enabledBorder: UnderlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      dateRetour != null
+                                          ? "${dateRetour!.day}/${dateRetour!.month}/${dateRetour!.year}"
+                                          : 'Choisir une date',
+                                      style: TextStyle(color: Colors.white.withOpacity(0.9)),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: prixController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              labelText: 'Prix',
+                              labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                              prefixIcon: const Icon(Icons.attach_money, color: Colors.white),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: placesController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              labelText: 'Places disponibles',
+                              labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                              prefixIcon: const Icon(Icons.event_seat, color: Colors.white),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: transportController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              labelText: 'Transport',
+                              labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                              prefixIcon: const Icon(Icons.directions_bus, color: Colors.white),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: hebergementController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              labelText: 'Hébergement',
+                              labelStyle: TextStyle(color: Colors.white.withOpacity(0.9)),
+                              prefixIcon: const Icon(Icons.hotel, color: Colors.white),
+                              enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Container(
+                            height: 55,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Colors.white, Color(0xFFF0F0F0)],
+                              ),
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.white.withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              onPressed: () async {
+                                if (destController.text.isEmpty ||
+                                    descController.text.isEmpty ||
+                                    dateDepart == null ||
+                                    dateRetour == null ||
+                                    prixController.text.isEmpty ||
+                                    placesController.text.isEmpty ||
+                                    transportController.text.isEmpty ||
+                                    hebergementController.text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Veuillez remplir tous les champs')),
+                                  );
+                                  return;
+                                }
+
+                                final travel = Travel(
+                                  id: null,
+                                  destination: destController.text,
+                                  description: descController.text,
+                                  dateDepart: dateDepart!,
+                                  dateRetour: dateRetour!,
+                                  prix: double.parse(prixController.text),
+                                  placesDisponibles: int.parse(placesController.text),
+                                  transport: transportController.text,
+                                  hebergement: hebergementController.text,
+                                );
+
+                                await travelService.insertTravel(travel);
+                                clearControllers();
+                                loadTravels();
+                              },
+                              icon: Icon(Icons.add, color: Colors.blue[700]),
+                              label: Text('Ajouter un voyage', style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: prixController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Prix',
-                          prefixIcon: Icon(Icons.attach_money, color: Colors.teal),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: placesController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Places disponibles',
-                          prefixIcon: Icon(Icons.event_seat, color: Colors.teal),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: transportController,
-                        decoration: const InputDecoration(
-                          labelText: 'Transport',
-                          prefixIcon: Icon(Icons.directions_bus, color: Colors.teal),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: hebergementController,
-                        decoration: const InputDecoration(
-                          labelText: 'Hébergement',
-                          prefixIcon: Icon(Icons.hotel, color: Colors.teal),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          if (destController.text.isEmpty ||
-                              descController.text.isEmpty ||
-                              dateDepart == null ||
-                              dateRetour == null ||
-                              prixController.text.isEmpty ||
-                              placesController.text.isEmpty ||
-                              transportController.text.isEmpty ||
-                              hebergementController.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Veuillez remplir tous les champs')),
-                            );
-                            return;
-                          }
-
-                          final travel = Travel(
-                            id: null, // Will be set by the database
-                            destination: destController.text,
-                            description: descController.text,
-                            dateDepart: dateDepart!,
-                            dateRetour: dateRetour!,
-                            prix: double.parse(prixController.text),
-                            placesDisponibles: int.parse(placesController.text),
-                            transport: transportController.text,
-                            hebergement: hebergementController.text,
-                          );
-
-                          await travelService.insertTravel(travel);
-                          clearControllers();
-                          loadTravels();
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Ajouter un voyage'),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
               const SizedBox(height: 20),
               // Liste des voyages
               ListView.builder(
@@ -406,7 +622,7 @@ class _TravelScreenState extends State<TravelScreen> {
                     color: Colors.blue[50],
                     child: ListTile(
                       title: Text(t.destination,
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
                       subtitle: Text(
                         '${t.description}\n'
                             '${t.dateDepart.day}/${t.dateDepart.month}/${t.dateDepart.year} - '
@@ -446,6 +662,8 @@ class _TravelScreenState extends State<TravelScreen> {
               ),
             ],
           ),
+        ),
+      ),
         ),
       ),
     );

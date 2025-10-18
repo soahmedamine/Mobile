@@ -25,79 +25,94 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       drawer: const AppDrawer(),
-      body: CustomScrollView(
-        slivers: [
-          // App Bar avec image
-          SliverAppBar(
-            expandedHeight: 300,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                widget.logement.nom,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      offset: Offset(0, 1),
-                      blurRadius: 3.0,
-                      color: Colors.black54,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.blue[800]!, Colors.blue[500]!, Colors.blue[200]!],
+          ),
+        ),
+        child: CustomScrollView(
+          slivers: [
+            // App Bar moderne
+            SliverAppBar(
+              expandedHeight: 250,
+              pinned: true,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: FlexibleSpaceBar(
+                title: Text(
+                  widget.logement.nom,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 2),
+                        blurRadius: 8.0,
+                        color: Colors.black54,
+                      ),
+                    ],
+                  ),
+                ),
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    widget.logement.imageUrl != null
+                        ? _buildHeaderImage(widget.logement.imageUrl!)
+                        : Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Colors.blue[400]!, Colors.blue[700]!],
+                              ),
+                            ),
+                            child: const Icon(Icons.home, size: 100, color: Colors.white),
+                          ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.6),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  widget.logement.imageUrl != null
-                      ? _buildHeaderImage(widget.logement.imageUrl!)
-                      : Container(
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.home, size: 100, color: Colors.grey),
-                        ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.white),
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LogementFormScreen(logement: widget.logement),
                       ),
-                    ),
-                  ),
-                ],
-              ),
+                    );
+                    if (result == true && mounted) {
+                      Navigator.pop(context, true);
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.white),
+                  onPressed: () => _showDeleteDialog(),
+                ),
+              ],
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => LogementFormScreen(logement: widget.logement),
-                    ),
-                  );
-                  if (result == true && mounted) {
-                    Navigator.pop(context, true);
-                  }
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: () => _showDeleteDialog(),
-              ),
-            ],
-          ),
 
-          // Contenu
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
+            // Contenu
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Type et note
@@ -361,6 +376,7 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
             ),
           ),
         ],
+        ),
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),

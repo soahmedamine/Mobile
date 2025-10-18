@@ -6,6 +6,7 @@ import '../services/image_service.dart';
 import '../widgets/app_drawer.dart';
 import 'logement_detail_screen.dart';
 import 'logement_form_screen.dart';
+import 'home_screen.dart';
 
 class LogementListScreen extends StatefulWidget {
   const LogementListScreen({super.key});
@@ -71,22 +72,58 @@ class _LogementListScreenState extends State<LogementListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Logements Disponibles'),
-        backgroundColor: Colors.teal,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          },
+          tooltip: 'Back to Home',
+        ),
+        title: const Text(
+          'Logements Disponibles',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadLogements,
           ),
         ],
       ),
       drawer: const AppDrawer(),
-      body: Column(
-        children: [
-          // Barre de recherche
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LogementFormScreen()),
+          );
+          _loadLogements();
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Ajouter'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.blue[700],
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.blue[800]!, Colors.blue[500]!, Colors.blue[200]!],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Barre de recherche
+              Padding(
+                padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -150,21 +187,7 @@ class _LogementListScreenState extends State<LogementListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const LogementFormScreen(),
-            ),
-          );
-          if (result == true) {
-            _loadLogements();
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Ajouter'),
-        backgroundColor: Colors.teal,
+        ),
       ),
     );
   }
