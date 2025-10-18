@@ -9,6 +9,7 @@ import '../screens/view_reclamations_screen.dart';
 import '../screens/chat_screen_new.dart';
 import '../screens/logement_list_screen.dart';
 import '../screens/culture_module_screen.dart';
+import '../screens/budget_screen.dart';
 import '../screens/event_list_screen.dart';
 
 class AppDrawer extends StatefulWidget {
@@ -51,192 +52,332 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(15),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(15),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: Colors.blue[700], size: 22),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white.withOpacity(0.5),
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
       child: Container(
-        color: Colors.white,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.blue[900]!,
+              Colors.blue[700]!,
+              Colors.blue[500]!,
+            ],
+          ),
+        ),
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            // En-tête du drawer
-            DrawerHeader(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue[800]!, Colors.blue[600]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
+            // En-tête du drawer moderne
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 50, 20, 30),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const CircleAvatar(
-                    radius: 35,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Colors.blue,
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Colors.white, Colors.white.withOpacity(0.8)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.5),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 35,
+                      backgroundColor: Colors.blue[700],
+                      child: const Icon(
+                        Icons.person,
+                        size: 40,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
                   Text(
                     _userName,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 20,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
-                    _userRole == 'admin' ? 'Administrateur' : 'Utilisateur',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _userRole == 'admin' ? 'Administrateur' : 'Utilisateur',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.95),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
 
+            const SizedBox(height: 10),
+
             // Menu items
-            ListTile(
-              leading: const Icon(Icons.home, color: Colors.blue),
-              title: const Text('Accueil'),
+            _buildMenuItem(
+              icon: Icons.home_outlined,
+              title: 'Accueil',
               onTap: () => _navigateTo(const HomeScreen()),
             ),
-            const Divider(height: 1),
 
-            ListTile(
-              leading: const Icon(Icons.cloud, color: Colors.lightBlue),
-              title: const Text('Météo'),
+            _buildMenuItem(
+              icon: Icons.cloud_outlined,
+              title: 'Météo',
               onTap: () => _navigateTo(const WeatherScreen()),
             ),
-            const Divider(height: 1),
 
-            ListTile(
-              leading: const Icon(Icons.travel_explore, color: Colors.orange),
-              title: const Text('Voyages'),
+            _buildMenuItem(
+              icon: Icons.travel_explore,
+              title: 'Voyages',
               onTap: () => _navigateTo(const TravelScreen()),
             ),
-            const Divider(height: 1),
 
-            ListTile(
-              leading: const Icon(Icons.hotel, color: Colors.deepOrange),
-              title: const Text('Logements'),
+            _buildMenuItem(
+              icon: Icons.hotel_outlined,
+              title: 'Logements',
               onTap: () => _navigateTo(const LogementListScreen()),
             ),
-            const Divider(height: 1),
 
-            ListTile(
-              leading: const Icon(Icons.message, color: Colors.green),
-              title: const Text('Chat AI'),
+            _buildMenuItem(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Budget',
+              onTap: () => _navigateTo(const BudgetScreen(travelId: 'default_travel')),
+            ),
+
+            _buildMenuItem(
+              icon: Icons.chat_outlined,
+              title: 'Chat AI',
               onTap: () => _navigateTo(const ChatScreen()),
             ),
-            const Divider(height: 1),
 
-            ListTile(
-              leading: const Icon(Icons.travel_explore, color: Colors.black),
-              title: const Text('Culture & Infos Locales'),
+            _buildMenuItem(
+              icon: Icons.public_outlined,
+              title: 'Culture & Infos Locales',
               onTap: () => _navigateTo(const CultureModuleScreen()),
             ),
-            const Divider(height: 1),
 
-            ListTile(
-              leading: const Icon(Icons.event, color: Colors.deepPurple),
-              title: const Text('Événements'),
+            _buildMenuItem(
+              icon: Icons.event_outlined,
+              title: 'Événements',
               onTap: () => _navigateTo(const EventListScreen()),
             ),
-            const Divider(height: 1),
 
             const SizedBox(height: 10),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
                 'Réclamations',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                  color: Colors.white.withOpacity(0.7),
+                  letterSpacing: 1,
                 ),
               ),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
 
-            ListTile(
-              leading: const Icon(Icons.add_comment, color: Colors.purple),
-              title: const Text('Nouvelle réclamation'),
+            _buildMenuItem(
+              icon: Icons.add_comment_outlined,
+              title: 'Nouvelle réclamation',
               onTap: () => _navigateTo(const ReclamationFormScreen()),
             ),
-            const Divider(height: 1),
 
-            ListTile(
-              leading: const Icon(Icons.list_alt, color: Colors.indigo),
-              title: const Text('Mes réclamations'),
+            _buildMenuItem(
+              icon: Icons.list_alt_outlined,
+              title: 'Mes réclamations',
               onTap: () => _navigateTo(const ViewReclamationsScreen()),
             ),
-            const Divider(height: 1),
 
-            // Section Admin (visible uniquement pour les admins)
+            // Section Admin
             if (_userRole == 'admin') ...[
               const SizedBox(height: 10),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   'Administration',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey,
+                    color: Colors.white.withOpacity(0.7),
+                    letterSpacing: 1,
                   ),
                 ),
               ),
-              const SizedBox(height: 5),
-              ListTile(
-                leading: const Icon(Icons.admin_panel_settings, color: Colors.red),
-                title: const Text('Gérer les réclamations'),
+              const SizedBox(height: 8),
+              _buildMenuItem(
+                icon: Icons.admin_panel_settings_outlined,
+                title: 'Gérer les réclamations',
                 onTap: () => _navigateTo(const ReclamationListScreen()),
               ),
-              const Divider(height: 1),
             ],
 
             const SizedBox(height: 20),
 
             // Déconnexion
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text(
-                'Déconnexion',
-                style: TextStyle(color: Colors.red),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(
+                  color: Colors.red.withOpacity(0.3),
+                  width: 1,
+                ),
               ),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Déconnexion'),
-                    content: const Text('Voulez-vous vraiment vous déconnecter ?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Annuler'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _logout();
-                        },
-                        child: const Text(
-                          'Déconnexion',
-                          style: TextStyle(color: Colors.red),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(15),
+                child: InkWell(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
+                        title: const Text('Déconnexion'),
+                        content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('Annuler', style: TextStyle(color: Colors.grey[600])),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _logout();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text('Déconnexion'),
+                          ),
+                        ],
                       ),
-                    ],
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(15),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.logout, color: Colors.white, size: 22),
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Text(
+                            'Déconnexion',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),

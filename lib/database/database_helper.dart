@@ -47,21 +47,11 @@ class DatabaseHelper {
 
   // Get all reclamations
   Future<List<Map<String, dynamic>>> getReclamations() async {
-    if (!_isInitialized) {
-      debugPrint('Initializing database in getReclamations...');
-      await init();
-    }
+    if (!_isInitialized) await init();
     
     try {
-      debugPrint('Getting all reclamations...');
       final allKeys = _prefs.getKeys();
-      debugPrint('Total keys in SharedPreferences: ${allKeys.length}');
-      
-      final keys = allKeys
-          .where((key) => key.startsWith('$tableReclamations-'))
-          .toList();
-      
-      debugPrint('Found ${keys.length} reclamation keys');
+      final keys = allKeys.where((key) => key.startsWith('$tableReclamations-')).toList();
       
       final reclamations = <Map<String, dynamic>>[];
       
@@ -69,27 +59,16 @@ class DatabaseHelper {
         final jsonString = _prefs.getString(key);
         if (jsonString != null) {
           try {
-            debugPrint('Parsing reclamation from key: $key');
             final reclamation = Map<String, dynamic>.from(jsonDecode(jsonString));
             reclamations.add(reclamation);
-            debugPrint('Added reclamation: ${reclamation[columnId]} - ${reclamation[columnSubject]}');
           } catch (e) {
             debugPrint('Error parsing reclamation $key: $e');
           }
-        } else {
-          debugPrint('No data found for key: $key');
         }
       }
       
-      debugPrint('Total reclamations parsed: ${reclamations.length}');
-      
       // Sort by date in descending order (newest first)
-      if (reclamations.isNotEmpty) {
-        reclamations.sort((a, b) => 
-            (b[columnDate] as String).compareTo((a[columnDate] as String)));
-      } else {
-        debugPrint('No reclamations to sort');
-      }
+      reclamations.sort((a, b) => (b[columnDate] as String).compareTo((a[columnDate] as String)));
       
       return reclamations;
     } catch (e) {

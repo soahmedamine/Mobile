@@ -12,6 +12,7 @@ import '../services/securite_sante_service.dart';
 import '../services/exchange_rate_service.dart';
 import '../services/world_time_service.dart';
 import '../services/air_quality_service.dart';
+import 'home_screen.dart';
 
 class CultureModuleScreen extends StatefulWidget {
   const CultureModuleScreen({super.key});
@@ -221,7 +222,18 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          },
+          tooltip: 'Back to Home',
+        ),
         title: const Text('Culture & Infos Locales'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
           tabs: [

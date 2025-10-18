@@ -9,6 +9,7 @@ import '../widgets/event_card.dart';
 import '../widgets/event_filters.dart';
 import 'event_detail_screen.dart';
 import 'event_form_screen.dart';
+import 'home_screen.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});
@@ -86,16 +87,31 @@ class _EventListScreenState extends State<EventListScreen> {
         final events = provider.events;
         final isLoading = provider.isLoading && events.isEmpty;
         return Scaffold(
+          extendBodyBehindAppBar: true,
           appBar: AppBar(
-            backgroundColor: Colors.blue,
-            title: const Text('Événements'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                );
+              },
+              tooltip: 'Back to Home',
+            ),
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            title: const Text(
+              'Événements',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            ),
             actions: [
               IconButton(
-                icon: Icon(_showFilters ? Icons.filter_alt_off : Icons.filter_alt),
+                icon: Icon(_showFilters ? Icons.filter_alt_off : Icons.filter_alt, color: Colors.white),
                 onPressed: provider.isLoading ? null : _openFilters,
               ),
               IconButton(
-                icon: const Icon(Icons.sync),
+                icon: const Icon(Icons.sync, color: Colors.white),
                 onPressed: provider.isLoading ? null : _onSync,
               ),
             ],
@@ -106,9 +122,21 @@ class _EventListScreenState extends State<EventListScreen> {
                   onPressed: () => _openForm(),
                   icon: const Icon(Icons.add),
                   label: const Text('Ajouter'),
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.blue[700],
+                  elevation: 4,
                 )
               : null,
-          body: Column(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.blue[800]!, Colors.blue[500]!, Colors.blue[200]!],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
             children: [
               if (_showFilters)
                 Padding(
@@ -150,25 +178,25 @@ class _EventListScreenState extends State<EventListScreen> {
                 ),
               Expanded(
                 child: isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: CircularProgressIndicator(color: Colors.white))
                     : RefreshIndicator(
                         onRefresh: _onRefresh,
                         child: events.isEmpty
                             ? ListView(
                                 padding: const EdgeInsets.all(24),
                                 children: [
-                                  const Icon(Icons.event_busy, size: 72, color: Colors.grey),
+                                  const Icon(Icons.event_busy, size: 72, color: Colors.white),
                                   const SizedBox(height: 12),
                                   Text(
                                     provider.errorMessage ?? 'Aucun événement trouvé',
                                     textAlign: TextAlign.center,
-                                    style: Theme.of(context).textTheme.bodyLarge,
+                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Utilisez les filtres ou synchronisez avec la source en ligne.',
                                     textAlign: TextAlign.center,
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white.withOpacity(0.8)),
                                   ),
                                 ],
                               )
@@ -188,6 +216,8 @@ class _EventListScreenState extends State<EventListScreen> {
                       ),
               ),
             ],
+              ),
+            ),
           ),
         );
       },

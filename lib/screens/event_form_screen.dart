@@ -244,17 +244,35 @@ class _EventFormScreenState extends State<EventFormScreen> {
     final dateFormat = DateFormat.yMMMMEEEEd('fr');
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.blue,
-        title: Text(widget.event == null ? 'Nouvel événement' : 'Modifier l\'événement'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          widget.event == null ? 'Nouvel événement' : 'Modifier l\'événement',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       drawer: const AppDrawer(),
-      body: AbsorbPointer(
-        absorbing: _isLoading,
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.blue[800]!, Colors.blue[500]!, Colors.blue[200]!],
+          ),
+        ),
+        child: SafeArea(
+          child: AbsorbPointer(
+            absorbing: _isLoading,
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -442,6 +460,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 ),
               ),
           ],
+        ),
+      ),
         ),
       ),
     );
