@@ -5,6 +5,9 @@ import 'view_reclamations_screen.dart';
 import 'event_list_screen.dart';
 import 'logement_list_screen.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/app_drawer.dart';
+import '../modules/trip_management/screens/TripListScreen.dart';
+import '../modules/trip_management/screens/create_trip_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 /// Storage service using SQLite via sqflite_common_ffi_web on web and sqflite on other platforms.
 class StorageService {
@@ -16,6 +15,8 @@ class StorageService {
 
   Database? _database;
   bool _isInitialized = false;
+
+  DatabaseFactory? get databaseFactoryFfiWeb => null;
 
   // Initialize the storage service
   Future<void> init() async {

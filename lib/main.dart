@@ -24,7 +24,7 @@ import 'screens/event_list_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Load environment variables
     await dotenv.load(fileName: ".env");
@@ -57,9 +57,9 @@ Future<void> main() async {
 
 class ErrorApp extends StatelessWidget {
   final String error;
-  
+
   const ErrorApp({super.key, required this.error});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -115,6 +115,8 @@ class MyApp extends StatelessWidget {
         '/view': (context) => const ViewReclamationsScreen(),
         '/culture': (context) => const CultureModuleScreen(),
         '/events': (context) => const EventListScreen(),
+        '/trips': (context) => const TripListScreen(),
+        '/create-trip': (context) => const CreateTripScreen(),
       },
     );
   }
@@ -226,9 +228,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
