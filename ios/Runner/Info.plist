@@ -5,11 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-<<<<<<< HEAD
 	<string>Smart Travel Weather App</string>
-=======
-	<string>My First App</string>
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -17,11 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-<<<<<<< HEAD
 	<string>smart_travel_weather_app</string>
-=======
-	<string>my_first_app</string>
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

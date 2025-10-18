@@ -6,17 +6,15 @@
 
 #include "generated_plugin_registrant.h"
 
-<<<<<<< HEAD
+#include <file_selector_windows/file_selector_windows.h>
 #include <printing/printing_plugin.h>
 #include <url_launcher_windows/url_launcher_windows.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
+  FileSelectorWindowsRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FileSelectorWindows"));
   PrintingPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("PrintingPlugin"));
   UrlLauncherWindowsRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("UrlLauncherWindows"));
-=======
-
-void RegisterPlugins(flutter::PluginRegistry* registry) {
->>>>>>> cc70f9f126a471c888d29de8763ccab9a1bc6a6a
 }
