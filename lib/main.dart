@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +16,7 @@ import 'screens/reclamation_list_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/view_reclamations_screen.dart';
 import 'providers/city_provider.dart';
+import 'screens/culture_module_screen.dart';
 import 'providers/event_provider.dart';
 import 'screens/chat_screen_new.dart';
 import 'screens/culture_module_screen.dart';
