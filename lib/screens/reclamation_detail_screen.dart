@@ -111,6 +111,8 @@ class _ReclamationDetailScreenState extends State<ReclamationDetailScreen> {
         ],
       ),
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
