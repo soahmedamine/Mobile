@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../models/trip_model.dart';
 import '../../../models/place_model.dart';
 import '../services/trip_service.dart';
@@ -9,7 +9,7 @@ import '../widgets/place_card.dart';
 import '../widgets/budget_tracker.dart';
 import 'map_explorer_screen.dart';
 import 'edit_trip_screen.dart';
-import '../../../services/maps_service.dart';
+import '../../../widgets/maptiler_webview.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -23,12 +23,12 @@ class TripDetailScreen extends StatefulWidget {
 class _TripDetailScreenState extends State<TripDetailScreen> {
   final TripService _tripService = TripService();
   final ItineraryService _itineraryService = ItineraryService();
-  final MapsService _mapsService = MapsService();
 
   List<Place> _places = [];
   List<Place> _expenses = [];
   double _totalExpenses = 0.0;
   bool _isLoading = true;
+
 
   @override
   void initState() {
@@ -238,21 +238,16 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       label: const Text('Enregistrer le Lieu'),
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
-                        double? lat = double.tryParse(latCtrl.text);
-                        double? lon = double.tryParse(lngCtrl.text);
-                        try {
-                          if ((lat == null || lon == null) && addressCtrl.text.isNotEmpty) {
-                            final geo = await _mapsService.geocode(addressCtrl.text);
-                            lat = geo['lat'];
-                            lon = geo['lon'];
-                          }
-                          if (lat == null || lon == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Veuillez fournir des coordonnées valides ou une adresse.')),
-                            );
-                            return;
-                          }
+                        final lat = double.tryParse(latCtrl.text);
+                        final lon = double.tryParse(lngCtrl.text);
+                        if (lat == null || lon == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Veuillez saisir une latitude et une longitude valides.')),
+                          );
+                          return;
+                        }
 
+                        try {
                           final place = Place(
                             name: nameCtrl.text,
                             address: addressCtrl.text,
@@ -340,14 +335,14 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             ),
           ),
 
-          // Embedded Map: Tunis -> Destination
+          // Embedded Map: show current places center via MapTiler WebView
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SizedBox(
               height: 220,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: _buildRouteMap(widget.trip.destination),
+                child: _buildPlacesWebView(),
               ),
             ),
           ),
@@ -453,60 +448,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  // Build a map showing route from Tunis (home) to the trip destination using ORS
-  Widget _buildRouteMap(String destination) {
-    const tunis = ll.LatLng(36.8065, 10.1815);
-    return FutureBuilder<Map<String, double>>(
-      future: _mapsService.geocode(destination),
-      builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snap.hasError || !snap.hasData) {
-          return const Center(child: Text('Carte indisponible'));
-        }
-        final dest = ll.LatLng(snap.data!['lat']!, snap.data!['lon']!);
-        return FutureBuilder<List<List<double>>>(
-          future: _mapsService.getRouteCoordinatesOrFallback(
-            tunis.latitude,
-            tunis.longitude,
-            dest.latitude,
-            dest.longitude,
-            'driving-car',
-          ),
-          builder: (context, routeSnap) {
-            final points = <ll.LatLng>[];
-            if (routeSnap.hasData) {
-              for (final c in routeSnap.data!) {
-                // [lon, lat]
-                points.add(ll.LatLng(c[1], c[0]));
-              }
-            }
-            return FlutterMap(
-              options: MapOptions(
-                initialCenter: ll.LatLng(
-                  (tunis.latitude + dest.latitude) / 2,
-                  (tunis.longitude + dest.longitude) / 2,
-                ),
-                initialZoom: 6,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
-                  userAgentPackageName: 'com.example.smart_travel_weather_app',
-                ),
-                if (points.isNotEmpty)
-                  PolylineLayer(polylines: [Polyline(points: points, color: Colors.blue, strokeWidth: 4)]),
-                MarkerLayer(markers: [
-                  Marker(point: tunis, width: 40, height: 40, child: const Icon(Icons.home, color: Colors.green)),
-                  Marker(point: dest, width: 40, height: 40, child: const Icon(Icons.flag, color: Colors.red)),
-                ]),
-              ],
-            );
-          },
-        );
-      },
-    );
+  // Embedded WebView map centered on average of places
+  Widget _buildPlacesWebView() {
+    if (_places.isEmpty) {
+      return const MapTilerWebView(latitude: 36.8065, longitude: 10.1815, zoom: 11);
+    }
+    double lat = 0, lng = 0;
+    for (final p in _places) {
+      lat += p.latitude;
+      lng += p.longitude;
+    }
+    final centerLat = lat / _places.length;
+    final centerLng = lng / _places.length;
+    final zoom = _places.length <= 1 ? 12.0 : 8.0;
+    return MapTilerWebView(latitude: centerLat, longitude: centerLng, zoom: zoom);
   }
 }

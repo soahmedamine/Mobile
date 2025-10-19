@@ -238,6 +238,29 @@ class HomeScreen extends StatelessWidget {
                     );
                   },
                 ),
+                // Trajectory Management
+                _buildFeatureButton(
+                  context: context,
+                  icon: Icons.route,
+                  label: 'Mes trajectoires',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const TripListScreen()),
+                    );
+                  },
+                ),
+                _buildFeatureButton(
+                  context: context,
+                  icon: Icons.add_road,
+                  label: 'Créer une trajectoire',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CreateTripScreen()),
+                    );
+                  },
+                ),
                 const SizedBox(height: 20),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../models/trip_model.dart';
 import '../../../models/place_model.dart';
 import '../services/trip_service.dart';
@@ -49,9 +50,13 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
-                  userAgentPackageName: 'com.example.smart_travel_weather_app',
+                  urlTemplate: 'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=${dotenv.env['MAPTILER_KEY']}',
+                  userAgentPackageName: 'smart_travel_weather_app',
+                ),
+                RichAttributionWidget(
+                  attributions: [
+                    TextSourceAttribution('© MapTiler © OpenStreetMap contributors'),
+                  ],
                 ),
                 if (points.length >= 2)
                   PolylineLayer(

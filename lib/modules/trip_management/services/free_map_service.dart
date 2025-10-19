@@ -1,24 +1,19 @@
 import 'dart:math';
+import 'package:latlong2/latlong.dart' as ll;
 import '../../../models/place_model.dart';
 
-class LatLng {
-  final double latitude;
-  final double longitude;
-  const LatLng(this.latitude, this.longitude);
-}
-
 class FreeMapService {
-  static LatLng getCenter(List<Place> places) {
+  static ll.LatLng getCenter(List<Place> places) {
     if (places.isEmpty) {
       // Default to a neutral coordinate (0,0) if none provided
-      return const LatLng(0.0, 0.0);
+      return const ll.LatLng(0.0, 0.0);
     }
     double lat = 0, lng = 0;
     for (final p in places) {
       lat += p.latitude;
       lng += p.longitude;
     }
-    return LatLng(lat / places.length, lng / places.length);
+    return ll.LatLng(lat / places.length, lng / places.length);
   }
 
   static double calculateTotalDistance(List<Place> places) {
