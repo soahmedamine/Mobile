@@ -1,7 +1,6 @@
 // Web implementation for map view
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void registerMapView(
   String viewId,
@@ -11,7 +10,6 @@ void registerMapView(
 ) {
   // Register the view factory for web
   ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
-    final key = dotenv.env['MAPTILER_KEY'] ?? '';
     final mapHtml = '''
       <!DOCTYPE html>
       <html>
@@ -29,9 +27,9 @@ void registerMapView(
         <div id="map"></div>
         <script>
           var map = L.map('map').setView([$lat, $lng], 13);
-          L.tileLayer('https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=$key', {
-            attribution: ' MapTiler  OpenStreetMap contributors',
-            maxZoom: 20
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: ' OpenStreetMap contributors',
+            maxZoom: 19
           }).addTo(map);
           var marker = L.marker([$lat, $lng], {
             draggable: true

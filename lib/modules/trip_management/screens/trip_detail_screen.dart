@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../models/trip_model.dart';
 import '../../../models/place_model.dart';
 import '../services/trip_service.dart';
@@ -9,7 +9,7 @@ import '../widgets/place_card.dart';
 import '../widgets/budget_tracker.dart';
 import 'map_explorer_screen.dart';
 import 'edit_trip_screen.dart';
-import '../../../widgets/maptiler_webview.dart';
+ 
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -335,14 +335,14 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             ),
           ),
 
-          // Embedded Map: show current places center via MapTiler WebView
+          // Embedded Map: OpenStreetMap via flutter_map (markers + polyline)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SizedBox(
               height: 220,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: _buildPlacesWebView(),
+                child: _buildPlacesMap(),
               ),
             ),
           ),
@@ -448,19 +448,56 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  // Embedded WebView map centered on average of places
-  Widget _buildPlacesWebView() {
-    if (_places.isEmpty) {
-      return const MapTilerWebView(latitude: 36.8065, longitude: 10.1815, zoom: 11);
+  // Embedded OSM map with markers and polyline built from _places
+  Widget _buildPlacesMap() {
+    // Build points in visit order
+    final sorted = [..._places]..sort((a, b) => a.visitDate.compareTo(b.visitDate));
+    final points = sorted.map((p) => ll.LatLng(p.latitude, p.longitude)).toList();
+
+    // Compute center
+    ll.LatLng center;
+    if (points.isEmpty) {
+      center = const ll.LatLng(36.8065, 10.1815); // Tunis default
+    } else {
+      final avgLat = points.map((e) => e.latitude).reduce((a, b) => a + b) / points.length;
+      final avgLng = points.map((e) => e.longitude).reduce((a, b) => a + b) / points.length;
+      center = ll.LatLng(avgLat, avgLng);
     }
-    double lat = 0, lng = 0;
-    for (final p in _places) {
-      lat += p.latitude;
-      lng += p.longitude;
-    }
-    final centerLat = lat / _places.length;
-    final centerLng = lng / _places.length;
-    final zoom = _places.length <= 1 ? 12.0 : 8.0;
-    return MapTilerWebView(latitude: centerLat, longitude: centerLng, zoom: zoom);
+
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: center,
+        initialZoom: points.length <= 1 ? 12 : 8,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'smart_travel_weather_app',
+          maxZoom: 19,
+        ),
+        if (points.length >= 2)
+          PolylineLayer(
+            polylines: [
+              Polyline(points: points, color: Colors.blue, strokeWidth: 4),
+            ],
+          ),
+        if (points.isNotEmpty)
+          MarkerLayer(
+            markers: sorted
+                .map((p) => Marker(
+                      point: ll.LatLng(p.latitude, p.longitude),
+                      width: 36,
+                      height: 36,
+                      child: const Icon(Icons.place, color: Colors.red),
+                    ))
+                .toList(),
+          ),
+        RichAttributionWidget(
+          attributions: [
+            TextSourceAttribution('© OpenStreetMap contributors'),
+          ],
+        ),
+      ],
+    );
   }
 }
