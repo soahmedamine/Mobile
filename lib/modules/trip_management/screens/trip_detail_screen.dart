@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../models/trip_model.dart';
 import '../../../models/place_model.dart';
 import '../services/trip_service.dart';
@@ -28,6 +31,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   List<Place> _expenses = [];
   double _totalExpenses = 0.0;
   bool _isLoading = true;
+  List<ll.LatLng> _routePoints = [];
 
 
   @override
@@ -46,11 +50,57 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         _totalExpenses = expenses;
         _isLoading = false;
       });
+
+      // Fetch ORS route if we have at least a start and end and a configured key
+      await _fetchRouteFromOpenRouteService();
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
       _showError('Erreur de chargement: $e');
+    }
+  }
+
+  Future<void> _fetchRouteFromOpenRouteService() async {
+    if (_places.length < 2) {
+      setState(() => _routePoints = []);
+      return;
+    }
+
+    final apiKey = dotenv.env['ORS_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) {
+      // No key configured; skip remote directions
+      return;
+    }
+
+    final start = '${_places.first.longitude},${_places.first.latitude}';
+    final end = '${_places.last.longitude},${_places.last.latitude}';
+    final uri = Uri.parse(
+        'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=$start&end=$end');
+
+    try {
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        final json = jsonDecode(resp.body) as Map<String, dynamic>;
+        final features = json['features'] as List<dynamic>;
+        if (features.isNotEmpty) {
+          final coords = (features[0]['geometry']['coordinates'] as List)
+              .cast<List>();
+          final pts = <ll.LatLng>[];
+          for (final c in coords) {
+            if (c.length >= 2) {
+              final lon = (c[0] as num).toDouble();
+              final lat = (c[1] as num).toDouble();
+              pts.add(ll.LatLng(lat, lon));
+            }
+          }
+          setState(() => _routePoints = pts);
+        }
+      } else {
+        debugPrint('ORS error ${resp.statusCode}: ${resp.body}');
+      }
+    } catch (e) {
+      debugPrint('ORS exception: $e');
     }
   }
 
@@ -475,7 +525,13 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           userAgentPackageName: 'smart_travel_weather_app',
           maxZoom: 19,
         ),
-        if (points.length >= 2)
+        if (_routePoints.isNotEmpty)
+          PolylineLayer(
+            polylines: [
+              Polyline(points: _routePoints, color: Colors.blue, strokeWidth: 4),
+            ],
+          )
+        else if (points.length >= 2)
           PolylineLayer(
             polylines: [
               Polyline(points: points, color: Colors.blue, strokeWidth: 4),
