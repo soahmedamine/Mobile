@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 // Conditional imports for web
 import 'location_picker_stub.dart'
     if (dart.library.html) 'location_picker_web.dart';
@@ -71,7 +73,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
             borderRadius: BorderRadius.circular(12),
             child: kIsWeb && _viewId != null
                 ? HtmlElementView(viewType: _viewId!)
-                : _buildFallbackInput(),
+                : _buildMobileMap(),
           ),
         ),
 
@@ -102,69 +104,46 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     );
   }
 
-  Widget _buildFallbackInput() {
-    return Container(
-      color: Colors.grey[100],
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.map, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'Carte interactive (Web uniquement)',
-            style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Latitude',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: _selectedLat?.toString()),
-                  onChanged: (value) {
-                    final lat = double.tryParse(value);
-                    if (lat != null) {
-                      setState(() => _selectedLat = lat);
-                      if (_selectedLng != null) {
-                        widget.onLocationSelected(lat, _selectedLng!);
-                      }
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Longitude',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: _selectedLng?.toString()),
-                  onChanged: (value) {
-                    final lng = double.tryParse(value);
-                    if (lng != null) {
-                      setState(() => _selectedLng = lng);
-                      if (_selectedLat != null) {
-                        widget.onLocationSelected(_selectedLat!, lng);
-                      }
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
+  Widget _buildMobileMap() {
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: LatLng(_selectedLat ?? 36.8065, _selectedLng ?? 10.1815),
+        initialZoom: 13.0,
+        onTap: (tapPosition, point) {
+          setState(() {
+            _selectedLat = point.latitude;
+            _selectedLng = point.longitude;
+          });
+          widget.onLocationSelected(point.latitude, point.longitude);
+        },
       ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
+          userAgentPackageName: 'com.smarttravel.app',
+          additionalOptions: const {
+            'attribution': '© OpenStreetMap contributors © CARTO',
+          },
+          maxNativeZoom: 20,
+          maxZoom: 20,
+        ),
+        MarkerLayer(
+          markers: [
+            if (_selectedLat != null && _selectedLng != null)
+              Marker(
+                width: 80.0,
+                height: 80.0,
+                point: LatLng(_selectedLat!, _selectedLng!),
+                child: const Icon(
+                  Icons.location_on,
+                  color: Colors.red,
+                  size: 40.0,
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

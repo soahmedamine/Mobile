@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../models/logement.dart';
 import '../services/maps_service.dart';
 import '../services/logement_service.dart';
@@ -272,7 +274,7 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Carte Google Maps
+                  // Carte Interactive
                   Container(
                     height: 250,
                     decoration: BoxDecoration(
@@ -283,31 +285,46 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
                       borderRadius: BorderRadius.circular(12),
                       child: Stack(
                         children: [
-                          Image.network(
-                            _mapsService.getStaticMapUrl(
-                              widget.logement.latitude,
-                              widget.logement.longitude,
-                              zoom: 15,
-                              width: 600,
-                              height: 400,
-                            ),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: Colors.grey[200],
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.map, size: 50, color: Colors.grey[400]),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Carte non disponible',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
+                          FlutterMap(
+                            options: MapOptions(
+                              initialCenter: LatLng(
+                                widget.logement.latitude,
+                                widget.logement.longitude,
+                              ),
+                              initialZoom: 15.0,
+                              interactionOptions: const InteractionOptions(
+                                flags: InteractiveFlag.all,
                               ),
                             ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                                subdomains: const ['a', 'b', 'c', 'd'],
+                                userAgentPackageName: 'com.smarttravel.app',
+                                additionalOptions: const {
+                                  'attribution': '© OpenStreetMap contributors © CARTO',
+                                },
+                                maxNativeZoom: 20,
+                                maxZoom: 20,
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    width: 80.0,
+                                    height: 80.0,
+                                    point: LatLng(
+                                      widget.logement.latitude,
+                                      widget.logement.longitude,
+                                    ),
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: Colors.red,
+                                      size: 40.0,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                           Positioned(
                             bottom: 12,
