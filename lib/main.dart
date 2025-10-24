@@ -9,6 +9,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'database/database_helper_new.dart' as db_helper;
+import 'modules/trip_management/screens/TripListScreen.dart';
 import 'services/logement_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/reclamation_form_screen.dart';
@@ -21,10 +22,11 @@ import 'providers/event_provider.dart';
 import 'screens/chat_screen_new.dart';
 import 'screens/culture_module_screen.dart';
 import 'screens/event_list_screen.dart';
+import 'modules/trip_management/screens/create_trip_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Load environment variables
     await dotenv.load(fileName: ".env");
@@ -57,9 +59,9 @@ Future<void> main() async {
 
 class ErrorApp extends StatelessWidget {
   final String error;
-  
+
   const ErrorApp({super.key, required this.error});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -115,6 +117,8 @@ class MyApp extends StatelessWidget {
         '/view': (context) => const ViewReclamationsScreen(),
         '/culture': (context) => const CultureModuleScreen(),
         '/events': (context) => const EventListScreen(),
+        '/trips': (context) => const TripListScreen(),
+        '/create-trip': (context) => const CreateTripScreen(),
       },
     );
   }
@@ -226,9 +230,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 

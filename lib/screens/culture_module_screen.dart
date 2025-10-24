@@ -12,6 +12,7 @@ import '../services/securite_sante_service.dart';
 import '../services/exchange_rate_service.dart';
 import '../services/world_time_service.dart';
 import '../services/air_quality_service.dart';
+import '../services/image_service.dart';
 import 'home_screen.dart';
 
 class CultureModuleScreen extends StatefulWidget {
@@ -285,30 +286,57 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     if (_profils.isEmpty) {
       return _buildEmpty('Aucun profil culturel');
     }
+    final imageService = ImageService();
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: _profils.length,
       itemBuilder: (context, i) {
         final p = _profils[i];
         return Card(
-          child: ListTile(
-            title: Text(p.pays),
-            subtitle: Text(p.traditions, maxLines: 2, overflow: TextOverflow.ellipsis),
-            trailing: _isAdmin
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _showProfilForm(existing: p),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (p.imageUrl != null)
+                imageService.isBase64Image(p.imageUrl)
+                    ? Image.memory(
+                        imageService.getBase64ImageBytes(p.imageUrl!)!,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.network(
+                        p.imageUrl!,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Center(child: Icon(Icons.error)),
+                            ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteProfil(p),
-                      ),
-                    ],
-                  )
-                : null,
+              ListTile(
+                title: Text(p.pays, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(p.traditions, maxLines: 2, overflow: TextOverflow.ellipsis),
+                trailing: _isAdmin
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () => _showProfilForm(existing: p),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteProfil(p),
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
+            ],
           ),
         );
       },
@@ -327,47 +355,160 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     final gastronomieCtrl = TextEditingController(text: existing?.gastronomie ?? '');
     final adopterCtrl = TextEditingController(text: existing?.comportementsAAdopter ?? '');
     final eviterCtrl = TextEditingController(text: existing?.comportementsAEviter ?? '');
+    String? selectedImage = existing?.imageUrl;
+    final imageService = ImageService();
 
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? 'Nouveau profil' : 'Modifier profil'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(decoration: const InputDecoration(labelText: 'Pays'), controller: paysCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Traditions'), controller: traditionsCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Gastronomie'), controller: gastronomieCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Comportements à adopter'), controller: adopterCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Comportements à éviter'), controller: eviterCtrl),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(existing == null ? 'Nouveau profil' : 'Modifier profil'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                TextField(decoration: const InputDecoration(labelText: 'Pays'), controller: paysCtrl),
+                TextField(decoration: const InputDecoration(labelText: 'Traditions'), controller: traditionsCtrl, maxLines: 2),
+                TextField(decoration: const InputDecoration(labelText: 'Gastronomie'), controller: gastronomieCtrl, maxLines: 2),
+                TextField(decoration: const InputDecoration(labelText: 'Comportements à adopter'), controller: adopterCtrl, maxLines: 2),
+                TextField(decoration: const InputDecoration(labelText: 'Comportements à éviter'), controller: eviterCtrl, maxLines: 2),
+                const SizedBox(height: 16),
+                // Image picker section
+                if (selectedImage != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: imageService.isBase64Image(selectedImage!)
+                        ? Image.memory(
+                            imageService.getBase64ImageBytes(selectedImage!)!,
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.network(
+                            selectedImage!,
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  height: 150,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.error),
+                                ),
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await showModalBottomSheet<String>(
+                      context: context,
+                      builder: (context) => SafeArea(
+                        child: Wrap(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.photo_library),
+                              title: const Text('Choisir depuis la galerie'),
+                              onTap: () => Navigator.pop(context, 'gallery'),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.camera_alt),
+                              title: const Text('Prendre une photo'),
+                              onTap: () => Navigator.pop(context, 'camera'),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.link),
+                              title: const Text('Entrer une URL'),
+                              onTap: () => Navigator.pop(context, 'url'),
+                            ),
+                            if (selectedImage != null)
+                              ListTile(
+                                leading: const Icon(Icons.delete, color: Colors.red),
+                                title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
+                                onTap: () => Navigator.pop(context, 'delete'),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+
+                    if (result == 'gallery') {
+                      final image = await imageService.pickImageFromGallery();
+                      if (image != null) {
+                        setState(() => selectedImage = image);
+                      }
+                    } else if (result == 'camera') {
+                      final image = await imageService.takePhoto();
+                      if (image != null) {
+                        setState(() => selectedImage = image);
+                      }
+                    } else if (result == 'url') {
+                      final urlCtrl = TextEditingController(text: selectedImage ?? '');
+                      final url = await showDialog<String>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('URL de l\'image'),
+                          content: TextField(
+                            controller: urlCtrl,
+                            decoration: const InputDecoration(
+                              hintText: 'https://...',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Annuler'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, urlCtrl.text),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (url != null && url.isNotEmpty) {
+                        setState(() => selectedImage = url);
+                      }
+                    } else if (result == 'delete') {
+                      setState(() => selectedImage = null);
+                    }
+                  },
+                  icon: const Icon(Icons.image),
+                  label: Text(selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image'),
+                ),
+              ],
+            ),
           ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            ElevatedButton(
+              onPressed: () async {
+                final item = ProfilCulturel(
+                  id: existing?.id,
+                  pays: paysCtrl.text.trim(),
+                  traditions: traditionsCtrl.text.trim(),
+                  gastronomie: gastronomieCtrl.text.trim(),
+                  comportementsAAdopter: adopterCtrl.text.trim(),
+                  comportementsAEviter: eviterCtrl.text.trim(),
+                  imageUrl: selectedImage,
+                );
+                if (existing == null) {
+                  await _profilService.create(item);
+                } else {
+                  await _profilService.update(item);
+                }
+                if (!mounted) return;
+                Navigator.pop(ctx);
+                await _loadAll();
+              },
+              child: const Text('Enregistrer'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-          ElevatedButton(
-            onPressed: () async {
-              final item = ProfilCulturel(
-                id: existing?.id,
-                pays: paysCtrl.text.trim(),
-                traditions: traditionsCtrl.text.trim(),
-                gastronomie: gastronomieCtrl.text.trim(),
-                comportementsAAdopter: adopterCtrl.text.trim(),
-                comportementsAEviter: eviterCtrl.text.trim(),
-              );
-              if (existing == null) {
-                await _profilService.create(item);
-              } else {
-                await _profilService.update(item);
-              }
-              if (!mounted) return;
-              Navigator.pop(ctx);
-              await _loadAll();
-            },
-            child: const Text('Enregistrer'),
-          ),
-        ],
       ),
     );
   }
@@ -377,30 +518,57 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     if (_expressions.isEmpty) {
       return _buildEmpty('Aucune expression');
     }
+    final imageService = ImageService();
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: _expressions.length,
       itemBuilder: (context, i) {
         final e = _expressions[i];
         return Card(
-          child: ListTile(
-            title: Text('${e.langue} • ${e.expression}'),
-            subtitle: Text(e.traduction),
-            trailing: _isAdmin
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _showExpressionForm(existing: e),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (e.imageUrl != null)
+                imageService.isBase64Image(e.imageUrl)
+                    ? Image.memory(
+                        imageService.getBase64ImageBytes(e.imageUrl!)!,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.network(
+                        e.imageUrl!,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(
+                              height: 150,
+                              color: Colors.grey[300],
+                              child: const Center(child: Icon(Icons.error)),
+                            ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteExpression(e),
-                      ),
-                    ],
-                  )
-                : null,
+              ListTile(
+                title: Text('${e.langue} • ${e.expression}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(e.traduction),
+                trailing: _isAdmin
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () => _showExpressionForm(existing: e),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteExpression(e),
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
+            ],
           ),
         );
       },
@@ -418,45 +586,158 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     final expressionCtrl = TextEditingController(text: existing?.expression ?? '');
     final traductionCtrl = TextEditingController(text: existing?.traduction ?? '');
     final categorieCtrl = TextEditingController(text: existing?.categorie ?? '');
+    String? selectedImage = existing?.imageUrl;
+    final imageService = ImageService();
 
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? 'Nouvelle expression' : 'Modifier expression'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(decoration: const InputDecoration(labelText: 'Langue'), controller: langueCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Expression'), controller: expressionCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Traduction'), controller: traductionCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Catégorie'), controller: categorieCtrl),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(existing == null ? 'Nouvelle expression' : 'Modifier expression'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                TextField(decoration: const InputDecoration(labelText: 'Langue'), controller: langueCtrl),
+                TextField(decoration: const InputDecoration(labelText: 'Expression'), controller: expressionCtrl),
+                TextField(decoration: const InputDecoration(labelText: 'Traduction'), controller: traductionCtrl),
+                TextField(decoration: const InputDecoration(labelText: 'Catégorie'), controller: categorieCtrl),
+                const SizedBox(height: 16),
+                // Image picker section
+                if (selectedImage != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: imageService.isBase64Image(selectedImage!)
+                        ? Image.memory(
+                            imageService.getBase64ImageBytes(selectedImage!)!,
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.network(
+                            selectedImage!,
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  height: 150,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.error),
+                                ),
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await showModalBottomSheet<String>(
+                      context: context,
+                      builder: (context) => SafeArea(
+                        child: Wrap(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.photo_library),
+                              title: const Text('Choisir depuis la galerie'),
+                              onTap: () => Navigator.pop(context, 'gallery'),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.camera_alt),
+                              title: const Text('Prendre une photo'),
+                              onTap: () => Navigator.pop(context, 'camera'),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.link),
+                              title: const Text('Entrer une URL'),
+                              onTap: () => Navigator.pop(context, 'url'),
+                            ),
+                            if (selectedImage != null)
+                              ListTile(
+                                leading: const Icon(Icons.delete, color: Colors.red),
+                                title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
+                                onTap: () => Navigator.pop(context, 'delete'),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+
+                    if (result == 'gallery') {
+                      final image = await imageService.pickImageFromGallery();
+                      if (image != null) {
+                        setState(() => selectedImage = image);
+                      }
+                    } else if (result == 'camera') {
+                      final image = await imageService.takePhoto();
+                      if (image != null) {
+                        setState(() => selectedImage = image);
+                      }
+                    } else if (result == 'url') {
+                      final urlCtrl = TextEditingController(text: selectedImage ?? '');
+                      final url = await showDialog<String>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('URL de l\'image'),
+                          content: TextField(
+                            controller: urlCtrl,
+                            decoration: const InputDecoration(
+                              hintText: 'https://...',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Annuler'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, urlCtrl.text),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (url != null && url.isNotEmpty) {
+                        setState(() => selectedImage = url);
+                      }
+                    } else if (result == 'delete') {
+                      setState(() => selectedImage = null);
+                    }
+                  },
+                  icon: const Icon(Icons.image),
+                  label: Text(selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image'),
+                ),
+              ],
+            ),
           ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            ElevatedButton(
+              onPressed: () async {
+                final item = ExpressionLocale(
+                  id: existing?.id,
+                  langue: langueCtrl.text.trim(),
+                  expression: expressionCtrl.text.trim(),
+                  traduction: traductionCtrl.text.trim(),
+                  categorie: categorieCtrl.text.trim(),
+                  imageUrl: selectedImage,
+                );
+                if (existing == null) {
+                  await _exprService.create(item);
+                } else {
+                  await _exprService.update(item);
+                }
+                if (!mounted) return;
+                Navigator.pop(ctx);
+                await _loadAll();
+              },
+              child: const Text('Enregistrer'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-          ElevatedButton(
-            onPressed: () async {
-              final item = ExpressionLocale(
-                id: existing?.id,
-                langue: langueCtrl.text.trim(),
-                expression: expressionCtrl.text.trim(),
-                traduction: traductionCtrl.text.trim(),
-                categorie: categorieCtrl.text.trim(),
-              );
-              if (existing == null) {
-                await _exprService.create(item);
-              } else {
-                await _exprService.update(item);
-              }
-              if (!mounted) return;
-              Navigator.pop(ctx);
-              await _loadAll();
-            },
-            child: const Text('Enregistrer'),
-          ),
-        ],
       ),
     );
   }
@@ -466,30 +747,57 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     if (_securites.isEmpty) {
       return _buildEmpty('Aucune fiche sécurité/santé');
     }
+    final imageService = ImageService();
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: _securites.length,
       itemBuilder: (context, i) {
         final s = _securites[i];
         return Card(
-          child: ListTile(
-            title: Text(s.pays),
-            subtitle: Text(s.precautionsGenerales, maxLines: 2, overflow: TextOverflow.ellipsis),
-            trailing: _isAdmin
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _showSecuriteForm(existing: s),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (s.imageUrl != null)
+                imageService.isBase64Image(s.imageUrl)
+                    ? Image.memory(
+                        imageService.getBase64ImageBytes(s.imageUrl!)!,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.network(
+                        s.imageUrl!,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Center(child: Icon(Icons.error)),
+                            ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteSecurite(s),
-                      ),
-                    ],
-                  )
-                : null,
+              ListTile(
+                title: Text(s.pays, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(s.precautionsGenerales, maxLines: 2, overflow: TextOverflow.ellipsis),
+                trailing: _isAdmin
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () => _showSecuriteForm(existing: s),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteSecurite(s),
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
+            ],
           ),
         );
       },
@@ -508,47 +816,160 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     final precautCtrl = TextEditingController(text: existing?.precautionsGenerales ?? '');
     final zonesCtrl = TextEditingController(text: existing?.zonesARisque ?? '');
     final urgenceCtrl = TextEditingController(text: existing?.urgenceContact ?? '');
+    String? selectedImage = existing?.imageUrl;
+    final imageService = ImageService();
 
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? 'Nouvelle fiche' : 'Modifier fiche'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(decoration: const InputDecoration(labelText: 'Pays'), controller: paysCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Vaccins recommandés'), controller: vaccinsCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Précautions générales'), controller: precautCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Zones à risque'), controller: zonesCtrl),
-              TextField(decoration: const InputDecoration(labelText: 'Contact d\'urgence'), controller: urgenceCtrl),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(existing == null ? 'Nouvelle fiche' : 'Modifier fiche'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                TextField(decoration: const InputDecoration(labelText: 'Pays'), controller: paysCtrl),
+                TextField(decoration: const InputDecoration(labelText: 'Vaccins recommandés'), controller: vaccinsCtrl, maxLines: 2),
+                TextField(decoration: const InputDecoration(labelText: 'Précautions générales'), controller: precautCtrl, maxLines: 2),
+                TextField(decoration: const InputDecoration(labelText: 'Zones à risque'), controller: zonesCtrl, maxLines: 2),
+                TextField(decoration: const InputDecoration(labelText: 'Contact d\'urgence'), controller: urgenceCtrl),
+                const SizedBox(height: 16),
+                // Image picker section
+                if (selectedImage != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: imageService.isBase64Image(selectedImage!)
+                        ? Image.memory(
+                            imageService.getBase64ImageBytes(selectedImage!)!,
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.network(
+                            selectedImage!,
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  height: 150,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.error),
+                                ),
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await showModalBottomSheet<String>(
+                      context: context,
+                      builder: (context) => SafeArea(
+                        child: Wrap(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.photo_library),
+                              title: const Text('Choisir depuis la galerie'),
+                              onTap: () => Navigator.pop(context, 'gallery'),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.camera_alt),
+                              title: const Text('Prendre une photo'),
+                              onTap: () => Navigator.pop(context, 'camera'),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.link),
+                              title: const Text('Entrer une URL'),
+                              onTap: () => Navigator.pop(context, 'url'),
+                            ),
+                            if (selectedImage != null)
+                              ListTile(
+                                leading: const Icon(Icons.delete, color: Colors.red),
+                                title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
+                                onTap: () => Navigator.pop(context, 'delete'),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+
+                    if (result == 'gallery') {
+                      final image = await imageService.pickImageFromGallery();
+                      if (image != null) {
+                        setState(() => selectedImage = image);
+                      }
+                    } else if (result == 'camera') {
+                      final image = await imageService.takePhoto();
+                      if (image != null) {
+                        setState(() => selectedImage = image);
+                      }
+                    } else if (result == 'url') {
+                      final urlCtrl = TextEditingController(text: selectedImage ?? '');
+                      final url = await showDialog<String>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('URL de l\'image'),
+                          content: TextField(
+                            controller: urlCtrl,
+                            decoration: const InputDecoration(
+                              hintText: 'https://...',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Annuler'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, urlCtrl.text),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (url != null && url.isNotEmpty) {
+                        setState(() => selectedImage = url);
+                      }
+                    } else if (result == 'delete') {
+                      setState(() => selectedImage = null);
+                    }
+                  },
+                  icon: const Icon(Icons.image),
+                  label: Text(selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image'),
+                ),
+              ],
+            ),
           ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            ElevatedButton(
+              onPressed: () async {
+                final item = SecuriteSante(
+                  id: existing?.id,
+                  pays: paysCtrl.text.trim(),
+                  vaccinsRecommandes: vaccinsCtrl.text.trim(),
+                  precautionsGenerales: precautCtrl.text.trim(),
+                  zonesARisque: zonesCtrl.text.trim(),
+                  urgenceContact: urgenceCtrl.text.trim(),
+                  imageUrl: selectedImage,
+                );
+                if (existing == null) {
+                  await _secService.create(item);
+                } else {
+                  await _secService.update(item);
+                }
+                if (!mounted) return;
+                Navigator.pop(ctx);
+                await _loadAll();
+              },
+              child: const Text('Enregistrer'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-          ElevatedButton(
-            onPressed: () async {
-              final item = SecuriteSante(
-                id: existing?.id,
-                pays: paysCtrl.text.trim(),
-                vaccinsRecommandes: vaccinsCtrl.text.trim(),
-                precautionsGenerales: precautCtrl.text.trim(),
-                zonesARisque: zonesCtrl.text.trim(),
-                urgenceContact: urgenceCtrl.text.trim(),
-              );
-              if (existing == null) {
-                await _secService.create(item);
-              } else {
-                await _secService.update(item);
-              }
-              if (!mounted) return;
-              Navigator.pop(ctx);
-              await _loadAll();
-            },
-            child: const Text('Enregistrer'),
-          ),
-        ],
       ),
     );
   }

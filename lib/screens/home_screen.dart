@@ -5,6 +5,9 @@ import 'view_reclamations_screen.dart';
 import 'event_list_screen.dart';
 import 'logement_list_screen.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/app_drawer.dart';
+import '../modules/trip_management/screens/TripListScreen.dart';
+import '../modules/trip_management/screens/create_trip_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -232,6 +235,29 @@ class HomeScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const LogementListScreen()),
+                    );
+                  },
+                ),
+                // Trajectory Management
+                _buildFeatureButton(
+                  context: context,
+                  icon: Icons.route,
+                  label: 'Mes trajectoires',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const TripListScreen()),
+                    );
+                  },
+                ),
+                _buildFeatureButton(
+                  context: context,
+                  icon: Icons.add_road,
+                  label: 'Créer une trajectoire',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CreateTripScreen()),
                     );
                   },
                 ),

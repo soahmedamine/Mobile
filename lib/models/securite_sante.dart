@@ -5,6 +5,7 @@ class SecuriteSante {
   String precautionsGenerales;
   String zonesARisque;
   String urgenceContact;
+  String? imageUrl;
 
   SecuriteSante({
     this.id,
@@ -13,6 +14,7 @@ class SecuriteSante {
     required this.precautionsGenerales,
     required this.zonesARisque,
     required this.urgenceContact,
+    this.imageUrl,
   });
 
   Map<String, dynamic> toMap() => {
@@ -22,6 +24,7 @@ class SecuriteSante {
         'precautionsGenerales': precautionsGenerales,
         'zonesARisque': zonesARisque,
         'urgenceContact': urgenceContact,
+        'imageUrl': imageUrl,
       };
 
   factory SecuriteSante.fromMap(Map<String, dynamic> map) => SecuriteSante(
@@ -31,5 +34,6 @@ class SecuriteSante {
         precautionsGenerales: map['precautionsGenerales'] ?? '',
         zonesARisque: map['zonesARisque'] ?? '',
         urgenceContact: map['urgenceContact'] ?? '',
+        imageUrl: map['imageUrl'] as String?,
       );
 }

@@ -27,16 +27,13 @@ void registerMapView(
         <div id="map"></div>
         <script>
           var map = L.map('map').setView([$lat, $lng], 13);
-          
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: ' OpenStreetMap contributors',
             maxZoom: 19
           }).addTo(map);
-          
           var marker = L.marker([$lat, $lng], {
             draggable: true
           }).addTo(map);
-          
           function updateLocation(lat, lng) {
             window.parent.postMessage({
               type: 'locationSelected',
@@ -44,12 +41,10 @@ void registerMapView(
               lng: lng
             }, '*');
           }
-          
           map.on('click', function(e) {
             marker.setLatLng(e.latlng);
             updateLocation(e.latlng.lat, e.latlng.lng);
           });
-          
           marker.on('dragend', function(e) {
             var position = marker.getLatLng();
             updateLocation(position.lat, position.lng);

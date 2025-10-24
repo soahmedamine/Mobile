@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/logement.dart';
 import '../services/maps_service.dart';
 import '../services/logement_service.dart';
@@ -20,6 +23,21 @@ class LogementDetailScreen extends StatefulWidget {
 class _LogementDetailScreenState extends State<LogementDetailScreen> {
   final MapsService _mapsService = MapsService();
   final LogementService _logementService = LogementService();
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminRole();
+  }
+
+  Future<void> _checkAdminRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('user_role');
+    setState(() {
+      _isAdmin = role == 'admin';
+    });
+  }
   final ImageService _imageService = ImageService();
 
   @override
@@ -86,26 +104,28 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
                   ],
                 ),
               ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.white),
-                  onPressed: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => LogementFormScreen(logement: widget.logement),
+              actions: _isAdmin
+                  ? [
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.white),
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => LogementFormScreen(logement: widget.logement),
+                            ),
+                          );
+                          if (result == true && mounted) {
+                            Navigator.pop(context, true);
+                          }
+                        },
                       ),
-                    );
-                    if (result == true && mounted) {
-                      Navigator.pop(context, true);
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.white),
-                  onPressed: () => _showDeleteDialog(),
-                ),
-              ],
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.white),
+                        onPressed: () => _showDeleteDialog(),
+                      ),
+                    ]
+                  : null,
             ),
 
             // Contenu
@@ -272,7 +292,7 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Carte Google Maps
+                  // Carte Interactive
                   Container(
                     height: 250,
                     decoration: BoxDecoration(
@@ -283,31 +303,46 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
                       borderRadius: BorderRadius.circular(12),
                       child: Stack(
                         children: [
-                          Image.network(
-                            _mapsService.getStaticMapUrl(
-                              widget.logement.latitude,
-                              widget.logement.longitude,
-                              zoom: 15,
-                              width: 600,
-                              height: 400,
-                            ),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: Colors.grey[200],
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.map, size: 50, color: Colors.grey[400]),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Carte non disponible',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
+                          FlutterMap(
+                            options: MapOptions(
+                              initialCenter: LatLng(
+                                widget.logement.latitude,
+                                widget.logement.longitude,
+                              ),
+                              initialZoom: 15.0,
+                              interactionOptions: const InteractionOptions(
+                                flags: InteractiveFlag.all,
                               ),
                             ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                                subdomains: const ['a', 'b', 'c', 'd'],
+                                userAgentPackageName: 'com.smarttravel.app',
+                                additionalOptions: const {
+                                  'attribution': '© OpenStreetMap contributors © CARTO',
+                                },
+                                maxNativeZoom: 20,
+                                maxZoom: 20,
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    width: 80.0,
+                                    height: 80.0,
+                                    point: LatLng(
+                                      widget.logement.latitude,
+                                      widget.logement.longitude,
+                                    ),
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: Colors.red,
+                                      size: 40.0,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                           Positioned(
                             bottom: 12,

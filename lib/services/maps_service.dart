@@ -42,15 +42,27 @@ class MapsService {
 
   // Obtenir l'URL pour les directions
   Future<void> openDirections(double fromLat, double fromLng, double toLat, double toLng) async {
-    final url = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1&origin=$fromLat,$fromLng&destination=$toLat,$toLng'
-    );
+    final urls = [
+      // URL pour l'application Google Maps (Android/iOS)
+      Uri.parse('google.navigation:q=$toLat,$toLng'),
+      // URL universelle pour directions
+      Uri.parse('https://maps.google.com/maps?saddr=$fromLat,$fromLng&daddr=$toLat,$toLng'),
+      // URL alternative
+      Uri.parse('https://www.google.com/maps/dir/?api=1&origin=$fromLat,$fromLng&destination=$toLat,$toLng'),
+    ];
 
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Impossible d\'ouvrir Google Maps';
+    for (final url in urls) {
+      try {
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+          return;
+        }
+      } catch (e) {
+        continue;
+      }
     }
+
+    throw 'Impossible d\'ouvrir Google Maps';
   }
 
   // Calculer la distance approximative entre deux points (formule de Haversine)
