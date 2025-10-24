@@ -5,6 +5,7 @@ class ProfilCulturel {
   String gastronomie;
   String comportementsAAdopter;
   String comportementsAEviter;
+  String? imageUrl;
 
   ProfilCulturel({
     this.id,
@@ -13,6 +14,7 @@ class ProfilCulturel {
     required this.gastronomie,
     required this.comportementsAAdopter,
     required this.comportementsAEviter,
+    this.imageUrl,
   });
 
   Map<String, dynamic> toMap() => {
@@ -22,6 +24,7 @@ class ProfilCulturel {
         'gastronomie': gastronomie,
         'comportementsAAdopter': comportementsAAdopter,
         'comportementsAEviter': comportementsAEviter,
+        'imageUrl': imageUrl,
       };
 
   factory ProfilCulturel.fromMap(Map<String, dynamic> map) => ProfilCulturel(
@@ -31,5 +34,6 @@ class ProfilCulturel {
         gastronomie: map['gastronomie'] ?? '',
         comportementsAAdopter: map['comportementsAAdopter'] ?? '',
         comportementsAEviter: map['comportementsAEviter'] ?? '',
+        imageUrl: map['imageUrl'] as String?,
       );
 }

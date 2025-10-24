@@ -4,6 +4,7 @@ class ExpressionLocale {
   String expression;
   String traduction;
   String categorie;
+  String? imageUrl;
 
   ExpressionLocale({
     this.id,
@@ -11,6 +12,7 @@ class ExpressionLocale {
     required this.expression,
     required this.traduction,
     required this.categorie,
+    this.imageUrl,
   });
 
   Map<String, dynamic> toMap() => {
@@ -19,6 +21,7 @@ class ExpressionLocale {
         'expression': expression,
         'traduction': traduction,
         'categorie': categorie,
+        'imageUrl': imageUrl,
       };
 
   factory ExpressionLocale.fromMap(Map<String, dynamic> map) => ExpressionLocale(
@@ -27,5 +30,6 @@ class ExpressionLocale {
         expression: map['expression'] ?? '',
         traduction: map['traduction'] ?? '',
         categorie: map['categorie'] ?? '',
+        imageUrl: map['imageUrl'] as String?,
       );
 }

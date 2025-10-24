@@ -72,7 +72,7 @@ flutter:
   assets:
     - assets/smartravel.png
     - .env
-aaaflutter_launcher_icons:
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/smartravel.png"
