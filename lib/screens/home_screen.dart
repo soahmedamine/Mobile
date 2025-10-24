@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'weather_screen.dart';
 import 'travel_screen.dart';
 import 'view_reclamations_screen.dart';
+import 'note_list_screen.dart';
 import 'event_list_screen.dart';
 import 'logement_list_screen.dart';
 import '../widgets/app_drawer.dart';
@@ -213,6 +214,17 @@ class HomeScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const ViewReclamationsScreen()),
+                    );
+                  },
+                ),
+                _buildFeatureButton(
+                  context: context,
+                  icon: Icons.note_outlined,
+                  label: 'Mes Notes',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NoteListScreen()),
                     );
                   },
                 ),

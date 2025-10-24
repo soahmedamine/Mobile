@@ -3,25 +3,20 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'database/database_helper_new.dart' as db_helper;
 import 'modules/trip_management/screens/TripListScreen.dart';
 import 'services/logement_service.dart';
 import 'screens/home_screen.dart';
-import 'screens/reclamation_form_screen.dart';
-import 'screens/reclamation_list_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/view_reclamations_screen.dart';
 import 'providers/city_provider.dart';
-import 'screens/culture_module_screen.dart';
 import 'providers/event_provider.dart';
-import 'screens/chat_screen_new.dart';
+import 'screens/login_screen.dart';
 import 'screens/culture_module_screen.dart';
 import 'screens/event_list_screen.dart';
+import 'screens/note_form_screen.dart';
+import 'screens/note_list_screen.dart';
+import 'screens/note_detail_screen.dart';
 import 'modules/trip_management/screens/create_trip_screen.dart';
 
 Future<void> main() async {
@@ -106,15 +101,18 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Smart Travel & Reclamation App',
+      title: 'Smart Travel & Notes App',
       theme: _buildThemeData(),
       home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
-        '/form': (context) => const ReclamationFormScreen(),
-        '/admin': (context) => const ReclamationListScreen(),
-        '/view': (context) => const ViewReclamationsScreen(),
+        '/notes': (context) => const NoteListScreen(),
+        '/note-form': (context) => const NoteFormScreen(),
+        '/note-detail': (context) {
+          final note = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return NoteDetailScreen(note: note);
+        },
         '/culture': (context) => const CultureModuleScreen(),
         '/events': (context) => const EventListScreen(),
         '/trips': (context) => const TripListScreen(),
@@ -240,7 +238,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     // Redirect based on role
     if (_userRole == 'admin') {
-      return const ReclamationListScreen();
+      return const NoteListScreen(); // Admins can also use the notes system
     } else {
       return const HomeScreen();
     }
