@@ -1,18 +1,20 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../models/trip_model.dart';
 import '../../../models/place_model.dart';
 import '../services/trip_service.dart';
 import '../services/itinerary_service.dart';
-import '../widgets/place_card.dart';
-import '../widgets/budget_tracker.dart';
 import 'map_explorer_screen.dart';
 import 'edit_trip_screen.dart';
- 
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -28,11 +30,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   final ItineraryService _itineraryService = ItineraryService();
 
   List<Place> _places = [];
-  List<Place> _expenses = [];
-  double _totalExpenses = 0.0;
   bool _isLoading = true;
   List<ll.LatLng> _routePoints = [];
-
 
   @override
   void initState() {
@@ -43,11 +42,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Future<void> _loadTripData() async {
     try {
       final places = await _tripService.getTripPlaces(widget.trip.id!);
-      final expenses = await _tripService.getTripTotalExpenses(widget.trip.id!);
 
       setState(() {
         _places = _itineraryService.optimizeItinerary(places);
-        _totalExpenses = expenses;
         _isLoading = false;
       });
 
@@ -61,11 +58,32 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
   }
 
-  Future<void> _fetchRouteFromOpenRouteService() async {
-    if (_places.length < 2) {
-      setState(() => _routePoints = []);
-      return;
+  Future<ll.LatLng?> _geocodeDestination(String destinationName) async {
+    final apiKey = dotenv.env['ORS_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) return null;
+
+    final uri = Uri.parse('https://api.openrouteservice.org/geocode/search?api_key=$apiKey&text=$destinationName&size=1');
+
+    try {
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        final json = jsonDecode(resp.body) as Map<String, dynamic>;
+        final features = json['features'] as List<dynamic>;
+        if (features.isNotEmpty) {
+          final coords = features[0]['geometry']['coordinates'] as List<dynamic>;
+          final lon = (coords[0] as num).toDouble();
+          final lat = (coords[1] as num).toDouble();
+          debugPrint('Geocoded "$destinationName" to: $lat, $lon');
+          return ll.LatLng(lat, lon);
+        }
+      }
+    } catch (e) {
+      debugPrint('Geocoding exception: $e');
     }
+    return null;
+  }
+
+  Future<void> _fetchRouteFromOpenRouteService() async {
 
     final apiKey = dotenv.env['ORS_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
@@ -73,8 +91,22 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       return;
     }
 
-    final start = '${_places.first.longitude},${_places.first.latitude}';
-    final end = '${_places.last.longitude},${_places.last.latitude}';
+    // Geocode the destination name to get coordinates
+    final destinationCoords = await _geocodeDestination(widget.trip.destination);
+    if (destinationCoords == null) {
+      debugPrint('Could not geocode destination. No route will be shown.');
+      return;
+    }
+
+    // Route always starts from Tunis and ends at the trip's main destination.
+    const tunisLongitude = 10.1815;
+    const tunisLatitude = 36.8065;
+
+    final start = '$tunisLongitude,$tunisLatitude';
+    final end = '${destinationCoords.longitude},${destinationCoords.latitude}';
+    debugPrint('--- Fetching ORS Route ---');
+    debugPrint('Start: $start');
+    debugPrint('End: $end');
     final uri = Uri.parse(
         'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=$start&end=$end');
 
@@ -95,6 +127,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             }
           }
           setState(() => _routePoints = pts);
+          debugPrint('Successfully fetched ${_routePoints.length} route points.');
         }
       } else {
         debugPrint('ORS error ${resp.statusCode}: ${resp.body}');
@@ -138,203 +171,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
   }
 
-  Future<void> _deletePlace(Place place) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer le Lieu'),
-        content: Text('Êtes-vous sûr de vouloir supprimer "${place.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      try {
-        await _tripService.deletePlace(place.id!);
-        _loadTripData();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lieu supprimé avec succès')),
-        );
-      } catch (e) {
-        _showError('Erreur de suppression: $e');
-      }
-    }
-  }
-
-  void _addNewPlace() {
-    _showAddPlaceSheet();
-  }
-
-  void _showAddPlaceSheet() {
-    final formKey = GlobalKey<FormState>();
-    final nameCtrl = TextEditingController();
-    final addressCtrl = TextEditingController();
-    final typeCtrl = TextEditingController(text: 'attraction');
-    final priceCtrl = TextEditingController();
-    final latCtrl = TextEditingController();
-    final lngCtrl = TextEditingController();
-    DateTime visitDate = DateTime.now();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-          ),
-          child: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Ajouter un Lieu', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Nom', border: OutlineInputBorder()),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Nom requis' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: addressCtrl,
-                    decoration: const InputDecoration(labelText: 'Adresse', border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: typeCtrl,
-                    decoration: const InputDecoration(labelText: 'Type (hotel, restaurant, attraction, ...)', border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: latCtrl,
-                          decoration: const InputDecoration(labelText: 'Latitude', border: OutlineInputBorder()),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          validator: (v) => (double.tryParse(v ?? '') == null) ? 'Latitude invalide' : null,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: lngCtrl,
-                          decoration: const InputDecoration(labelText: 'Longitude', border: OutlineInputBorder()),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          validator: (v) => (double.tryParse(v ?? '') == null) ? 'Longitude invalide' : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: priceCtrl,
-                    decoration: const InputDecoration(labelText: 'Prix (optionnel)', border: OutlineInputBorder(), prefixText: '\$'),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: visitDate,
-                        firstDate: widget.trip.startDate,
-                        lastDate: widget.trip.endDate,
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          visitDate = picked;
-                        });
-                      }
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Date de visite',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.calendar_today),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(_formatDate(visitDate)),
-                          const Icon(Icons.arrow_drop_down),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.save),
-                      label: const Text('Enregistrer le Lieu'),
-                      onPressed: () async {
-                        if (!formKey.currentState!.validate()) return;
-                        final lat = double.tryParse(latCtrl.text);
-                        final lon = double.tryParse(lngCtrl.text);
-                        if (lat == null || lon == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Veuillez saisir une latitude et une longitude valides.')),
-                          );
-                          return;
-                        }
-
-                        try {
-                          final place = Place(
-                            name: nameCtrl.text,
-                            address: addressCtrl.text,
-                            latitude: lat,
-                            longitude: lon,
-                            type: typeCtrl.text,
-                            price: priceCtrl.text.isEmpty ? null : double.tryParse(priceCtrl.text),
-                            tripId: widget.trip.id!,
-                            visitDate: visitDate,
-                            rating: null,
-                            notes: null,
-                          );
-
-                          await _tripService.addPlace(place);
-                          if (!mounted) return;
-                          Navigator.of(ctx).pop();
-                          await _loadTripData();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Lieu ajouté')),
-                          );
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Erreur: $e')),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final daysDifference = widget.trip.endDate.difference(widget.trip.startDate).inDays;
@@ -357,145 +193,252 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-        children: [
-          // Header Info
-          Card(
-            margin: const EdgeInsets.all(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+          : SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.trip.destination,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                  // Header Info
+                  Card(
+                    margin: const EdgeInsets.all(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.trip.destination,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Du ${_formatDate(widget.trip.startDate)} au ${_formatDate(widget.trip.endDate)}',
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time, size: 18, color: Colors.grey),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Durée: $daysDifference jours',
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ],
+                          ),
+                          if (widget.trip.description != null) ...[
+                            const SizedBox(height: 12),
+                            const Divider(),
+                            const SizedBox(height: 8),
+                            Text(
+                              widget.trip.description!,
+                              style: const TextStyle(fontSize: 15, color: Colors.black87),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text('Du ${_formatDate(widget.trip.startDate)} au ${_formatDate(widget.trip.endDate)}'),
-                  Text('Durée: $daysDifference jours'),
-                  if (widget.trip.description != null)
-                    Text('Description: ${widget.trip.description}'),
-                ],
-              ),
-            ),
-          ),
 
-          // Embedded Map: OpenStreetMap via flutter_map (markers + polyline)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              height: 220,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: _buildPlacesMap(),
-              ),
-            ),
-          ),
-
-          // Budget Tracker
-          BudgetTracker(
-            totalBudget: widget.trip.budget,
-            totalExpenses: _totalExpenses,
-            onAddExpense: () {
-              // Implement add expense functionality
-            }, expenses: [],
-          ),
-
-          // Places Section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Lieux Visités',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  // Map Section
+                  Container(
+                    height: 400,
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: _buildPlacesMap(),
+                    ),
                   ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _addNewPlace,
-                  icon: const Icon(Icons.add_location),
-                  label: const Text('Ajouter'),
-                ),
-              ],
-            ),
-          ),
+                  const SizedBox(height: 16),
 
-          // Places List
-          Expanded(
-            child: _places.isEmpty
-                ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.place, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'Aucun lieu ajouté!\nAppuyez sur "Ajouter" pour commencer.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  // Download PDF Button
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: ElevatedButton.icon(
+                      onPressed: _downloadPdf,
+                      icon: const Icon(Icons.picture_as_pdf),
+                      label: const Text('Télécharger le PDF du voyage'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            )
-                : ListView.builder(
-              itemCount: _places.length,
-              itemBuilder: (context, index) {
-                final place = _places[index];
-                return PlaceCard(
-                  place: place,
-                  onTap: () {
-                    _showPlaceDetails(place);
-                  },
-                  onDelete: () => _deletePlace(place),
-                );
-              },
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPlaceDetails(Place place) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(place.name),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Type: ${place.type}'),
-              Text('Adresse: ${place.address}'),
-              Text('Coordonnées: ${place.latitude.toStringAsFixed(4)}, ${place.longitude.toStringAsFixed(4)}'),
-              if (place.price != null) Text('Prix: \$${place.price!.toStringAsFixed(2)}'),
-              Text('Date de visite: ${_formatDate(place.visitDate)}'),
-              if (place.rating != null) Text('Note: ${place.rating}/5'),
-              if (place.notes != null) Text('Notes: ${place.notes}'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
     );
   }
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Future<void> _downloadPdf() async {
+    try {
+      // Request storage permission
+      if (Platform.isAndroid) {
+        final status = await Permission.storage.request();
+        if (!status.isGranted) {
+          _showError('Permission de stockage refusée');
+          return;
+        }
+      }
+
+      // Show loading
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Génération du PDF en cours...'), duration: Duration(seconds: 2)),
+      );
+
+      // Generate PDF
+      final pdf = pw.Document();
+      final placesSorted = [..._places]..sort((a, b) => a.visitDate.compareTo(b.visitDate));
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (context) => [
+            // Title
+            pw.Text(
+              'Résumé du Voyage',
+              style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Divider(thickness: 2),
+            pw.SizedBox(height: 20),
+
+            // Trip Info
+            pw.Text(
+              widget.trip.title,
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Row(
+              children: [
+                pw.Icon(pw.IconData(0xe0b7), size: 16),
+                pw.SizedBox(width: 8),
+                pw.Text('Destination: ${widget.trip.destination}', style: const pw.TextStyle(fontSize: 14)),
+              ],
+            ),
+            pw.SizedBox(height: 8),
+            pw.Row(
+              children: [
+                pw.Icon(pw.IconData(0xe192), size: 16),
+                pw.SizedBox(width: 8),
+                pw.Text(
+                  'Période: ${_formatDate(widget.trip.startDate)} - ${_formatDate(widget.trip.endDate)}',
+                  style: const pw.TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 8),
+            pw.Row(
+              children: [
+                pw.Icon(pw.IconData(0xe192), size: 16),
+                pw.SizedBox(width: 8),
+                pw.Text(
+                  'Durée: ${widget.trip.endDate.difference(widget.trip.startDate).inDays} jours',
+                  style: const pw.TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            if (widget.trip.description != null) ...[
+              pw.SizedBox(height: 12),
+              pw.Text('Description:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.SizedBox(height: 4),
+              pw.Text(widget.trip.description!, style: const pw.TextStyle(fontSize: 12)),
+            ],
+            pw.SizedBox(height: 24),
+
+            // Places Section
+            pw.Text(
+              'Lieux visités (${placesSorted.length})',
+              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
+            ),
+            pw.SizedBox(height: 12),
+
+            if (placesSorted.isEmpty)
+              pw.Text('Aucun lieu enregistré.', style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey))
+            else
+              pw.Table.fromTextArray(
+                headers: ['#', 'Nom', 'Type', 'Date de visite', 'Coordonnées'],
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                cellStyle: const pw.TextStyle(fontSize: 10),
+                cellAlignment: pw.Alignment.centerLeft,
+                data: [
+                  for (int i = 0; i < placesSorted.length; i++)
+                    [
+                      '${i + 1}',
+                      placesSorted[i].name,
+                      placesSorted[i].type,
+                      _formatDate(placesSorted[i].visitDate),
+                      '${placesSorted[i].latitude.toStringAsFixed(4)}, ${placesSorted[i].longitude.toStringAsFixed(4)}',
+                    ],
+                ],
+              ),
+
+            pw.SizedBox(height: 24),
+            pw.Divider(),
+            pw.SizedBox(height: 8),
+            pw.Text(
+              'Généré le ${_formatDate(DateTime.now())}',
+              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
+            ),
+          ],
+        ),
+      );
+
+      // Save to Downloads folder
+      Directory? directory;
+      if (Platform.isAndroid) {
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else if (Platform.isIOS) {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      if (directory == null) {
+        _showError('Impossible de trouver le dossier de téléchargement');
+        return;
+      }
+
+      final fileName = 'voyage_${widget.trip.title.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(await pdf.save());
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('PDF enregistré: ${file.path}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
+        ),
+      );
+    } catch (e) {
+      _showError('Erreur lors de la génération du PDF: $e');
+    }
   }
 
   // Embedded OSM map with markers and polyline built from _places
@@ -521,8 +464,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
-          userAgentPackageName: 'smart_travel_weather_app',
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.example.smart_travel_weather_app',
           maxZoom: 19,
         ),
         if (_routePoints.isNotEmpty)
