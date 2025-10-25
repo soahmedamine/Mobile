@@ -49,12 +49,12 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
                   userAgentPackageName: 'smart_travel_weather_app',
                 ),
                 RichAttributionWidget(
                   attributions: [
-                    TextSourceAttribution('© OpenStreetMap contributors'),
+                    TextSourceAttribution('Wikimedia | © OpenStreetMap contributors'),
                   ],
                 ),
                 if (points.length >= 2)

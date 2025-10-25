@@ -521,7 +521,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          urlTemplate: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
           userAgentPackageName: 'smart_travel_weather_app',
           maxZoom: 19,
         ),
@@ -550,7 +550,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           ),
         RichAttributionWidget(
           attributions: [
-            TextSourceAttribution('© OpenStreetMap contributors'),
+            TextSourceAttribution('Wikimedia | © OpenStreetMap contributors'),
           ],
         ),
       ],
