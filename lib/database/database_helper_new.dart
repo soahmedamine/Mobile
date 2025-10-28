@@ -19,7 +19,7 @@ class DatabaseHelper {
   late SharedPreferences _prefs;
   bool _isInitialized = false;
 
-  // Constants for column names
+  // Constants for column names - Reclamations
   static const String tableReclamations = 'reclamations';
   static const String columnId = 'id';
   static const String columnName = 'name';
@@ -30,6 +30,15 @@ class DatabaseHelper {
   static const String columnStatus = 'status';
   static const String columnResponse = 'response';
   static const String columnAttachment = 'attachment';
+  
+  // Constants for Notes table
+  static const String tableNotes = 'notes';
+  static const String columnUserId = 'user_id';
+  static const String columnImageUrl = 'image_url';
+  static const String columnImageData = 'image_data';
+  static const String columnAdminResponse = 'admin_response';
+  static const String columnCreatedAt = 'created_at';
+  static const String columnUpdatedAt = 'updated_at';
 
   // Check if database is initialized
   bool get isInitialized => _isInitialized;
@@ -61,7 +70,7 @@ class DatabaseHelper {
         _database = await databaseFactory.openDatabase(
           'reclamations.db',
           options: OpenDatabaseOptions(
-            version: 2,
+            version: 3,
             onCreate: (db, version) async {
               // Create reclamations table
               await db.execute('''
@@ -78,6 +87,23 @@ class DatabaseHelper {
                 )
               ''');
               debugPrint('✅ Created reclamations table (WEB)');
+              
+              // Create notes table
+              await db.execute('''
+                CREATE TABLE $tableNotes (
+                  $columnId TEXT PRIMARY KEY,
+                  $columnUserId TEXT,
+                  $columnSubject TEXT NOT NULL,
+                  $columnMessage TEXT NOT NULL,
+                  $columnStatus TEXT DEFAULT 'active',
+                  $columnAdminResponse TEXT,
+                  $columnImageUrl TEXT,
+                  $columnImageData TEXT,
+                  $columnCreatedAt TEXT NOT NULL,
+                  $columnUpdatedAt TEXT NOT NULL
+                )
+              ''');
+              debugPrint('✅ Created notes table (WEB)');
             },
             onUpgrade: (db, oldVersion, newVersion) async {
               if (oldVersion < 2) {
@@ -90,6 +116,27 @@ class DatabaseHelper {
                   debugPrint('Column attachment may already exist: $e');
                 }
               }
+              if (oldVersion < 3) {
+                try {
+                  await db.execute('''
+                    CREATE TABLE IF NOT EXISTS $tableNotes (
+                      $columnId TEXT PRIMARY KEY,
+                      $columnUserId TEXT,
+                      $columnSubject TEXT NOT NULL,
+                      $columnMessage TEXT NOT NULL,
+                      $columnStatus TEXT DEFAULT 'active',
+                      $columnAdminResponse TEXT,
+                      $columnImageUrl TEXT,
+                      $columnImageData TEXT,
+                      $columnCreatedAt TEXT NOT NULL,
+                      $columnUpdatedAt TEXT NOT NULL
+                    )
+                  ''');
+                  debugPrint('✅ Created notes table during upgrade');
+                } catch (e) {
+                  debugPrint('Error creating notes table: $e');
+                }
+              }
             },
           ),
         );
@@ -100,7 +147,7 @@ class DatabaseHelper {
         
         _database = await openDatabase(
           path,
-          version: 2,
+          version: 3,
           onCreate: (db, version) async {
             await db.execute('''
               CREATE TABLE $tableReclamations (
@@ -116,6 +163,22 @@ class DatabaseHelper {
               )
             ''');
             debugPrint('✅ Created reclamations table (MOBILE)');
+            
+            await db.execute('''
+              CREATE TABLE $tableNotes (
+                $columnId TEXT PRIMARY KEY,
+                $columnUserId TEXT,
+                $columnSubject TEXT NOT NULL,
+                $columnMessage TEXT NOT NULL,
+                $columnStatus TEXT DEFAULT 'active',
+                $columnAdminResponse TEXT,
+                $columnImageUrl TEXT,
+                $columnImageData TEXT,
+                $columnCreatedAt TEXT NOT NULL,
+                $columnUpdatedAt TEXT NOT NULL
+              )
+            ''');
+            debugPrint('✅ Created notes table (MOBILE)');
           },
           onUpgrade: (db, oldVersion, newVersion) async {
             if (oldVersion < 2) {
@@ -126,6 +189,27 @@ class DatabaseHelper {
                 debugPrint('✅ Added attachment column');
               } catch (e) {
                 debugPrint('Column attachment may already exist: $e');
+              }
+            }
+            if (oldVersion < 3) {
+              try {
+                await db.execute('''
+                  CREATE TABLE IF NOT EXISTS $tableNotes (
+                    $columnId TEXT PRIMARY KEY,
+                    $columnUserId TEXT,
+                    $columnSubject TEXT NOT NULL,
+                    $columnMessage TEXT NOT NULL,
+                    $columnStatus TEXT DEFAULT 'active',
+                    $columnAdminResponse TEXT,
+                    $columnImageUrl TEXT,
+                    $columnImageData TEXT,
+                    $columnCreatedAt TEXT NOT NULL,
+                    $columnUpdatedAt TEXT NOT NULL
+                  )
+                ''');
+                debugPrint('✅ Created notes table during upgrade');
+              } catch (e) {
+                debugPrint('Error creating notes table: $e');
               }
             }
           },
@@ -357,25 +441,169 @@ class DatabaseHelper {
     }
   }
 
-  // Print all reclamations (for debugging)
-  Future<void> printAllReclamations() async {
+  // Print all notes (for debugging)
+  Future<void> printAllNotes() async {
+    final notes = await getNotes();
+    debugPrint('📋 All Notes (${notes.length}):');
+    for (var note in notes) {
+      debugPrint('  - ${note[columnId]}: ${note[columnSubject]}');
+    }
+  }
+
+  // ==================== NOTES CRUD OPERATIONS ====================
+  
+  // Insert a new note
+  Future<int> insertNote(Map<String, dynamic> note) async {
+    final db = await database;
+    
+    try {
+      final id = DateTime.now().millisecondsSinceEpoch.toString();
+      final now = DateTime.now().toIso8601String();
+      
+      note[columnId] = id;
+      note[columnCreatedAt] = note[columnCreatedAt] ?? now;
+      note[columnUpdatedAt] = now;
+      note[columnStatus] = note[columnStatus] ?? 'active';
+      note[columnAdminResponse] = note[columnAdminResponse] ?? '';
+      
+      await db.insert(
+        tableNotes,
+        note,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      
+      debugPrint('✅ Inserted note with ID: $id');
+      return 1; // Success
+    } catch (e) {
+      debugPrint('❌ Error inserting note: $e');
+      rethrow;
+    }
+  }
+
+  // Get all notes
+  Future<List<Map<String, dynamic>>> getNotes({String? userId}) async {
     if (!_isInitialized) await init();
     
     try {
-      final reclamations = await getReclamations();
-      debugPrint('\n========== ALL RECLAMATIONS (${ reclamations.length}) ==========');
-      for (final rec in reclamations) {
-        debugPrint('---');
-        debugPrint('ID: ${rec[columnId] ?? 'N/A'}');
-        debugPrint('Name: ${rec[columnName] ?? 'N/A'}');
-        debugPrint('Email: ${rec[columnEmail] ?? 'N/A'}');
-        debugPrint('Subject: ${rec[columnSubject] ?? 'N/A'}');
-        debugPrint('Status: ${rec[columnStatus] ?? 'N/A'}');
-        debugPrint('Date: ${rec[columnDate] ?? 'N/A'}');
+      final db = await database;
+      List<Map<String, dynamic>> notes;
+      
+      if (userId != null && userId.isNotEmpty) {
+        notes = await db.query(
+          tableNotes,
+          where: '$columnUserId = ?',
+          whereArgs: [userId],
+          orderBy: '$columnCreatedAt DESC',
+        );
+      } else {
+        notes = await db.query(
+          tableNotes,
+          orderBy: '$columnCreatedAt DESC',
+        );
       }
-      debugPrint('========================================\n');
+      
+      debugPrint('📋 Retrieved ${notes.length} note(s) from SQLite');
+      return notes;
     } catch (e) {
-      debugPrint('❌ Error printing reclamations: $e');
+      debugPrint('❌ Error getting notes: $e');
+      rethrow;
+    }
+  }
+
+  // Get a specific note by ID
+  Future<Map<String, dynamic>?> getNote(String id) async {
+    if (!_isInitialized) await init();
+    
+    try {
+      final db = await database;
+      final results = await db.query(
+        tableNotes,
+        where: '$columnId = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      
+      if (results.isEmpty) {
+        debugPrint('⚠️ Note with ID $id not found');
+        return null;
+      }
+      
+      return results.first;
+    } catch (e) {
+      debugPrint('❌ Error getting note: $e');
+      rethrow;
+    }
+  }
+
+  // Update an existing note
+  Future<int> updateNote(Map<String, dynamic> note) async {
+    if (!_isInitialized) await init();
+    
+    try {
+      final id = note[columnId];
+      if (id == null) {
+        throw Exception('Cannot update note without an ID');
+      }
+      
+      // Update the updated_at timestamp
+      note[columnUpdatedAt] = DateTime.now().toIso8601String();
+      
+      final db = await database;
+      final rowsAffected = await db.update(
+        tableNotes,
+        note,
+        where: '$columnId = ?',
+        whereArgs: [id],
+      );
+      
+      if (rowsAffected > 0) {
+        debugPrint('✅ Updated note with ID: $id');
+      } else {
+        debugPrint('⚠️ No note found with ID: $id');
+      }
+      
+      return rowsAffected;
+    } catch (e) {
+      debugPrint('❌ Error updating note: $e');
+      rethrow;
+    }
+  }
+
+  // Delete a note
+  Future<int> deleteNote(String id) async {
+    if (!_isInitialized) await init();
+    
+    try {
+      final db = await database;
+      final rowsDeleted = await db.delete(
+        tableNotes,
+        where: '$columnId = ?',
+        whereArgs: [id],
+      );
+      
+      if (rowsDeleted > 0) {
+        debugPrint('✅ Deleted note with ID: $id');
+      } else {
+        debugPrint('⚠️ No note found with ID: $id to delete');
+      }
+      
+      return rowsDeleted;
+    } catch (e) {
+      debugPrint('❌ Error deleting note: $e');
+      rethrow;
+    }
+  }
+
+  // Clear all notes (for testing)
+  Future<void> clearAllNotes() async {
+    if (!_isInitialized) await init();
+    
+    try {
+      final db = await database;
+      final count = await db.delete(tableNotes);
+      debugPrint('✅ Cleared $count note(s) from SQLite');
+    } catch (e) {
+      debugPrint('❌ Error clearing notes: $e');
       rethrow;
     }
   }

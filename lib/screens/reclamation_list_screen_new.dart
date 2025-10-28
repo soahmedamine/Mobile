@@ -56,6 +56,68 @@ class _ReclamationListScreenState extends State<ReclamationListScreen> {
     );
   }
 
+  Future<void> _showDeleteAllConfirmation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Delete All Reclamations'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete ALL ${_reclamations.length} reclamation(s)?\n\n'
+          'This action cannot be undone!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('DELETE ALL'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteAllReclamations();
+    }
+  }
+
+  Future<void> _deleteAllReclamations() async {
+    try {
+      await _dbHelper.clearAllReclamations();
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _reclamations.clear();
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ All reclamations deleted successfully'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      _loadReclamations();
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorSnackBar('Failed to delete reclamations: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,6 +149,11 @@ class _ReclamationListScreenState extends State<ReclamationListScreen> {
               ).then((_) => _loadReclamations());
             },
             tooltip: 'View All Reclamations',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_sweep, color: Colors.white),
+            onPressed: _reclamations.isEmpty ? null : _showDeleteAllConfirmation,
+            tooltip: 'Delete All Reclamations',
           ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),

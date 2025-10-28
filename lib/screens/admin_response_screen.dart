@@ -109,6 +109,84 @@ class _AdminResponseScreenState extends State<AdminResponseScreen> {
     }
   }
 
+  Future<void> _showDeleteConfirmation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Delete Reclamation'),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to delete this reclamation?\n\n'
+          'This action cannot be undone!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteReclamation();
+    }
+  }
+
+  Future<void> _deleteReclamation() async {
+    setState(() => _isSubmitting = true);
+
+    try {
+      final id = widget.reclamation[DatabaseHelper.columnId];
+      if (id == null) {
+        throw Exception('Reclamation ID is missing');
+      }
+
+      await _dbHelper.deleteReclamation(id);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Reclamation deleted successfully'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Navigate back to home screen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting reclamation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isAdmin) {
@@ -145,6 +223,11 @@ class _AdminResponseScreenState extends State<AdminResponseScreen> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: _isSubmitting ? null : _showDeleteConfirmation,
+            tooltip: 'Delete Reclamation',
+          ),
           IconButton(
             icon: const Icon(Icons.save),
             onPressed: _isSubmitting ? null : _saveResponse,
