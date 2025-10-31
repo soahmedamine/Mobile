@@ -38,10 +38,23 @@ class _AppDrawerState extends State<AppDrawer> {
   }
 
   Future<void> _logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      if (!mounted) return;
+      
+      // Navigate to the auth screen and remove all previous routes
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/auth', 
+        (route) => false,
+      );
+    } catch (e) {
+      debugPrint('Error during logout: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error during logout')),
+      );
+    }
   }
 
   void _navigateTo(Widget screen) {

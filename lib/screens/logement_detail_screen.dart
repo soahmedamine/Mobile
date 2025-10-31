@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/logement.dart';
 import '../services/maps_service.dart';
 import '../services/logement_service.dart';
@@ -23,20 +22,10 @@ class LogementDetailScreen extends StatefulWidget {
 class _LogementDetailScreenState extends State<LogementDetailScreen> {
   final MapsService _mapsService = MapsService();
   final LogementService _logementService = LogementService();
-  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
-    _checkAdminRole();
-  }
-
-  Future<void> _checkAdminRole() async {
-    final prefs = await SharedPreferences.getInstance();
-    final role = prefs.getString('user_role');
-    setState(() {
-      _isAdmin = role == 'admin';
-    });
   }
   final ImageService _imageService = ImageService();
 
@@ -104,28 +93,26 @@ class _LogementDetailScreenState extends State<LogementDetailScreen> {
                   ],
                 ),
               ),
-              actions: _isAdmin
-                  ? [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.white),
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => LogementFormScreen(logement: widget.logement),
-                            ),
-                          );
-                          if (result == true && mounted) {
-                            Navigator.pop(context, true);
-                          }
-                        },
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.white),
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LogementFormScreen(logement: widget.logement),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.white),
-                        onPressed: () => _showDeleteDialog(),
-                      ),
-                    ]
-                  : null,
+                    );
+                    if (result == true && mounted) {
+                      Navigator.pop(context, true);
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.white),
+                  onPressed: () => _showDeleteDialog(),
+                ),
+              ],
             ),
 
             // Contenu

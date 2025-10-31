@@ -258,12 +258,10 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                 _buildRecommendationsTab(),
               ],
             ),
-      floatingActionButton: _isAdmin
-          ? FloatingActionButton(
-              onPressed: _onAdd,
-              child: const Icon(Icons.add),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _onAdd,
+        child: const Icon(Icons.add),
+      ),
     );
   }
 

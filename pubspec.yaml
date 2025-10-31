@@ -30,7 +30,7 @@ dependencies:
   shared_preferences_android: ^2.2.1
   
   # HTTP and API
-  http: ^1.2.0
+  http: ^1.1.0
   
   # PDF generation
   pdf: ^3.11.0
@@ -40,7 +40,7 @@ dependencies:
   # Utilities
   url_launcher: ^6.1.7
   form_validator: ^2.1.1
-  intl: ^0.20.2
+  intl: ^0.18.1
   uuid: ^4.3.3
   
   # Charts
@@ -54,13 +54,22 @@ dependencies:
   # Image picker
   image_picker: ^1.0.7
   image_picker_web: ^3.1.1
+  
+  # UI Components
+  google_fonts: ^6.1.0
+  
+  # Authentication - Using only Google for now to avoid conflicts
+  firebase_core: ^2.15.1
+  firebase_auth: ^4.9.0
+  google_sign_in: ^6.1.4
 
   # Maps
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
 
-  # WebView (for MapTiler embeddable viewer)
+  # WebView
   webview_flutter: ^4.7.0
+  flutter_inappwebview: ^6.1.5  # For reCAPTCHA implementation
 
 dev_dependencies:
   flutter_test:

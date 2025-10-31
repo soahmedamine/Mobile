@@ -137,23 +137,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             ),
             onPressed: _toggleFavorite,
           ),
-          if (widget.isAdmin && _event.id != null)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
-              onSelected: (value) {
-                if (value == 'edit') _editEvent();
-                if (value == 'toggle') _toggleActive();
-                if (value == 'delete') _deleteEvent();
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'edit', child: Text('Modifier')),
-                PopupMenuItem(
-                  value: 'toggle',
-                  child: Text(_event.isActive ? 'Désactiver' : 'Activer'),
-                ),
-                const PopupMenuItem(value: 'delete', child: Text('Supprimer')),
-              ],
-            ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (value) {
+              if (value == 'edit') _editEvent();
+              if (value == 'delete') _deleteEvent();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'edit', child: Text('Modifier')),
+              const PopupMenuItem(value: 'delete', child: Text('Supprimer')),
+            ],
+          ),
         ],
       ),
       drawer: const AppDrawer(),

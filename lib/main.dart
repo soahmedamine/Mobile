@@ -8,17 +8,17 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'database/database_helper_new.dart' as db_helper;
 import 'modules/trip_management/screens/TripListScreen.dart';
 import 'services/logement_service.dart';
+import 'services/alert_service.dart';
 import 'screens/home_screen.dart';
 import 'providers/city_provider.dart';
 import 'providers/event_provider.dart';
-import 'screens/login_screen.dart';
+import 'providers/alert_provider.dart';
+import 'screens/auth_screen.dart';
 import 'screens/culture_module_screen.dart';
 import 'screens/event_list_screen.dart';
-
 import 'screens/note_form_screen.dart';
 import 'screens/note_list_screen.dart';
 import 'screens/note_detail_screen.dart';
-
 import 'modules/trip_management/screens/create_trip_screen.dart';
 
 Future<void> main() async {
@@ -39,11 +39,17 @@ Future<void> main() async {
     // Initialize date formatting for French locale used in the app
     await initializeDateFormatting('fr_FR', null);
 
+    // Initialize alert service
+    final alertService = AlertService();
+    
     runApp(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => CityProvider()),
           ChangeNotifierProvider(create: (_) => EventProvider()),
+          ChangeNotifierProvider(
+            create: (_) => AlertProvider(alertService),
+          ),
         ],
         child: const MyApp(),
       ),
@@ -107,7 +113,7 @@ class MyApp extends StatelessWidget {
       theme: _buildThemeData(),
       home: const AuthWrapper(),
       routes: {
-        '/login': (context) => const LoginScreen(),
+        '/auth': (context) => const AuthScreen(),
         '/home': (context) => const HomeScreen(),
         '/notes': (context) => const NoteListScreen(),
         '/note-form': (context) => const NoteFormScreen(),
@@ -220,9 +226,34 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   // Callback for successful login
   void _onLoginSuccess() {
+    debugPrint('🔄 [AUTH] onLoginSuccess called');
     if (mounted) {
-      // Recheck auth status after successful login
-      _checkAuthStatus();
+      // Update the state to reflect the user is logged in
+      _checkAuthStatus().then((_) {
+        debugPrint('🔍 [AUTH] Checked auth status - isLoggedIn: $_isLoggedIn, role: $_userRole');
+        
+        // After checking auth status, navigate to the appropriate screen
+        if (_isLoggedIn) {
+          debugPrint('🚀 [AUTH] Navigating to appropriate screen...');
+          if (_userRole == 'admin') {
+            debugPrint('   ↳ Admin detected, going to NoteListScreen');
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const NoteListScreen()),
+            );
+          } else {
+            debugPrint('   ↳ Regular user, going to HomeScreen');
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        } else {
+          debugPrint('❌ [AUTH] User is not logged in after check');
+        }
+      }).catchError((error) {
+        debugPrint('❌ [AUTH] Error during auth status check: $error');
+      });
+    } else {
+      debugPrint('⚠️ [AUTH] onLoginSuccess called but widget is not mounted');
     }
   }
 
@@ -235,7 +266,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
 
     if (!_isLoggedIn) {
-      return LoginScreen(onLoginSuccess: _onLoginSuccess);
+      return AuthScreen(
+        onLoginSuccess: _onLoginSuccess,
+      );
     }
 
     // Redirect based on role

@@ -117,16 +117,10 @@ class _EventListScreenState extends State<EventListScreen> {
             ],
           ),
           drawer: const AppDrawer(),
-          floatingActionButton: _isAdmin
-              ? FloatingActionButton.extended(
-                  onPressed: () => _openForm(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Ajouter'),
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.blue[700],
-                  elevation: 4,
-                )
-              : null,
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _openForm(),
+            child: const Icon(Icons.add),
+          ),
           body: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(

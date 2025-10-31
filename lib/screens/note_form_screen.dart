@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import '../database/database_helper_new.dart';
 import '../services/bad_word_filter.dart';
+import '../providers/alert_provider.dart';
 
 class NoteFormScreen extends StatefulWidget {
   final Map<String, dynamic>? note; // For editing existing notes
@@ -28,18 +28,11 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
   String? _imageData;
   final _imagePicker = ImagePicker();
   
-  // Speech to text
-  late stt.SpeechToText _speech;
-  bool _isListening = false;
-  bool _speechAvailable = false;
-  String _currentLocale = 'en_US';
-  String _listeningFor = ''; // 'subject' or 'message'
+  // Removed speech to text functionality
 
   @override
   void initState() {
     super.initState();
-    _speech = stt.SpeechToText();
-    _initSpeech();
     
     if (widget.note != null) {
       _subjectController.text = widget.note![DatabaseHelper.columnSubject] ?? '';
@@ -48,119 +41,16 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
     }
   }
   
-  Future<void> _initSpeech() async {
-    // Request microphone permission
-    PermissionStatus status = await Permission.microphone.request();
-    if (!status.isGranted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Permission microphone refusée. La reconnaissance vocale ne fonctionnera pas.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-
-    try {
-      _speechAvailable = await _speech.initialize(
-        onStatus: (status) {
-          if (status == 'done' || status == 'notListening') {
-            setState(() => _isListening = false);
-          }
-        },
-        onError: (error) {
-          setState(() => _isListening = false);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Erreur: ${error.errorMsg}')),
-            );
-          }
-        },
-      );
-      
-      if (_speechAvailable) {
-        // Get available locales
-        final locales = await _speech.locales();
-        // Try to find French locale, otherwise use default
-        final frenchLocale = locales.firstWhere(
-          (locale) => locale.localeId.startsWith('fr'),
-          orElse: () => locales.first,
-        );
-        setState(() {
-          _currentLocale = frenchLocale.localeId;
-        });
-      }
-    } catch (e) {
-      print('Speech initialization error: $e');
-    }
-  }
+  // Speech to text functionality has been removed
 
   @override
   void dispose() {
-    _speech.cancel();
     _subjectController.dispose();
     _messageController.dispose();
     super.dispose();
   }
   
-  Future<void> _startListening(String field) async {
-    // Check permission again before starting
-    PermissionStatus status = await Permission.microphone.status;
-    if (!status.isGranted) {
-      status = await Permission.microphone.request();
-      if (!status.isGranted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('⚠️ Permission microphone requise pour la reconnaissance vocale.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-    }
-
-    if (!_speechAvailable) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⚠️ La reconnaissance vocale n\'est pas disponible'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-    
-    setState(() {
-      _isListening = true;
-      _listeningFor = field;
-    });
-    
-    await _speech.listen(
-      onResult: (result) {
-        setState(() {
-          if (field == 'subject') {
-            _subjectController.text = result.recognizedWords;
-          } else if (field == 'message') {
-            _messageController.text = result.recognizedWords;
-          }
-        });
-      },
-      localeId: _currentLocale,
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 3),
-      partialResults: true,
-      cancelOnError: true,
-    );
-  }
-  
-  Future<void> _stopListening() async {
-    await _speech.stop();
-    setState(() {
-      _isListening = false;
-      _listeningFor = '';
-    });
-  }
+  // Speech recognition methods have been removed
 
   Future<void> _pickImage() async {
     try {
@@ -229,24 +119,45 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
         DatabaseHelper.columnImageData: _imageData,
       };
 
+      final alertProvider = Provider.of<AlertProvider>(context, listen: false);
+      
       if (widget.note != null) {
         // Update existing note
         note[DatabaseHelper.columnId] = widget.note![DatabaseHelper.columnId];
         await _dbHelper.updateNote(note);
         
         if (!mounted) return;
+        
+        // Add alert for updated note
+        await alertProvider.addAlert(
+          title: 'Note mise à jour',
+          message: 'La note "${filteredSubject.isNotEmpty ? filteredSubject : 'Sans titre'}" a été mise à jour.',
+          type: 'note',
+          itemId: widget.note![DatabaseHelper.columnId].toString(),
+          action: 'updated',
+        );
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('✅ Note mise à jour avec succès!')),
         );
       } else {
         // Insert new note
-        await _dbHelper.insertNote(note);
+        final id = await _dbHelper.insertNote(note);
 
         if (!mounted) return;
         _formKey.currentState!.reset();
         setState(() {
           _imageData = null;
         });
+
+        // Add alert for new note
+        await alertProvider.addAlert(
+          title: 'Nouvelle note',
+          message: 'Une nouvelle note a été créée : ${filteredSubject.isNotEmpty ? filteredSubject : 'Sans titre'}',
+          type: 'note',
+          itemId: id.toString(),
+          action: 'added',
+        );
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('✅ Note créée avec succès!')),
@@ -367,24 +278,6 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
                               labelText: 'Sujet *',
                               hintText: 'Le titre de votre note',
                               prefixIcon: const Icon(Icons.title),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _isListening && _listeningFor == 'subject'
-                                      ? Icons.mic
-                                      : Icons.mic_none,
-                                  color: _isListening && _listeningFor == 'subject'
-                                      ? Colors.red
-                                      : Colors.blue[700],
-                                ),
-                                onPressed: () {
-                                  if (_isListening && _listeningFor == 'subject') {
-                                    _stopListening();
-                                  } else {
-                                    _startListening('subject');
-                                  }
-                                },
-                                tooltip: 'Dictée vocale',
-                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -411,24 +304,6 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
                               labelText: 'Message *',
                               hintText: 'Décrivez votre note en détail',
                               prefixIcon: const Icon(Icons.message),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _isListening && _listeningFor == 'message'
-                                      ? Icons.mic
-                                      : Icons.mic_none,
-                                  color: _isListening && _listeningFor == 'message'
-                                      ? Colors.red
-                                      : Colors.blue[700],
-                                ),
-                                onPressed: () {
-                                  if (_isListening && _listeningFor == 'message') {
-                                    _stopListening();
-                                  } else {
-                                    _startListening('message');
-                                  }
-                                },
-                                tooltip: 'Dictée vocale',
-                              ),
                               alignLabelWithHint: true,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),

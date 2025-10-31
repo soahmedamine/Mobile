@@ -21,7 +21,6 @@ class _LogementListScreenState extends State<LogementListScreen> {
   final ImageService _imageService = ImageService();
   List<Logement> _logements = [];
   List<Logement> _filteredLogements = [];
-  bool _isAdmin = false;
   bool _isLoading = true;
   String _selectedType = 'Tous';
   final TextEditingController _searchController = TextEditingController();
@@ -31,22 +30,14 @@ class _LogementListScreenState extends State<LogementListScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAdminRole();
     _loadLogements();
+    _searchController.addListener(_filterLogements);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _checkAdminRole() async {
-    final prefs = await SharedPreferences.getInstance();
-    final role = prefs.getString('user_role');
-    setState(() {
-      _isAdmin = role == 'admin';
-    });
   }
 
   Future<void> _loadLogements() async {
@@ -108,21 +99,19 @@ class _LogementListScreenState extends State<LogementListScreen> {
         ],
       ),
       drawer: const AppDrawer(),
-      floatingActionButton: _isAdmin
-          ? FloatingActionButton.extended(
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LogementFormScreen()),
-                );
-                _loadLogements();
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Ajouter'),
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.blue[700],
-            )
-          : null,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LogementFormScreen()),
+          );
+          _loadLogements();
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Ajouter'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.blue[700],
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
