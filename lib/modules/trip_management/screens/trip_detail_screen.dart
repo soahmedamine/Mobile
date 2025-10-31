@@ -20,7 +20,7 @@ class TripDetailScreen extends StatefulWidget {
   final Trip trip;
 
   const TripDetailScreen({Key? key, required this.trip}) : super(key: key);
-
+//dont pull my commits 
   @override
   _TripDetailScreenState createState() => _TripDetailScreenState();
 }
