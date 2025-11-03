@@ -70,7 +70,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
         if (mounted) {
           Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Voyage créé avec succès!')),
+            const SnackBar(content: Text('Trajectoire créé avec succès!')),
           );
         }
       } catch (e) {
@@ -87,10 +87,11 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Créer un Nouveau Voyage'),
+        title: const Text('Créer Trajectoire'),
+        iconTheme: IconThemeData(color: Colors.blue),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
+            icon: const Icon(Icons.save, color: Colors.blue),
             onPressed: _createTrip,
           ),
         ],

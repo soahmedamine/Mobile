@@ -67,6 +67,9 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
 
+  #
+  share_plus: ^7.0.1  # for pdf
+
   # WebView
   webview_flutter: ^4.7.0
   flutter_inappwebview: ^6.1.5  # For reCAPTCHA implementation

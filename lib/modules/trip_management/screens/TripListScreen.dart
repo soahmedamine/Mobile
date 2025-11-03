@@ -99,14 +99,14 @@ class _TripListScreenState extends State<TripListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes Voyages'),
+        title: const Text('Mes Trajectoires'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _createNewTrip,
-            tooltip: 'Créer un nouveau voyage',
+            tooltip: 'Créer un nouveau Trajectoires',
           ),
         ],
       ),
@@ -130,12 +130,12 @@ class _TripListScreenState extends State<TripListScreen> {
           Icon(Icons.flight_takeoff, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 20),
           const Text(
-            'Aucun voyage créé',
+            'Aucun Trajectoires créé',
             style: TextStyle(fontSize: 20, color: Colors.grey),
           ),
           const SizedBox(height: 10),
           const Text(
-            'Commencez par créer votre premier voyage !',
+            'Commencez par créer votre premier Trajectoires !',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey),
           ),
@@ -143,7 +143,7 @@ class _TripListScreenState extends State<TripListScreen> {
           ElevatedButton.icon(
             onPressed: _createNewTrip,
             icon: const Icon(Icons.add),
-            label: const Text('Créer mon premier voyage'),
+            label: const Text('Créer mon premier Trajectoires'),
           ),
         ],
       ),

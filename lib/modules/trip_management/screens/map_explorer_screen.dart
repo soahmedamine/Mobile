@@ -38,7 +38,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       appBar: AppBar(
         title: Text('Explore - ${widget.trip.destination}'),
         backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        foregroundColor: Colors.green,
       ),
       body: _places.isEmpty
           ? const Center(child: Text('Aucun lieu à afficher'))

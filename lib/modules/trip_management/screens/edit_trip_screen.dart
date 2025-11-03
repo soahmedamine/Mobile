@@ -83,7 +83,7 @@ class _EditTripScreenState extends State<EditTripScreen> {
         if (mounted) {
           Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Voyage mis à jour avec succès!')),
+            const SnackBar(content: Text('Trajectoire mis à jour avec succès!')),
           );
         }
       } catch (e) {
@@ -100,10 +100,10 @@ class _EditTripScreenState extends State<EditTripScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Modifier le Voyage'),
+        title: const Text('Modifier Trajectoire'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
+            icon: const Icon(Icons.save ,color: Colors.blue),
             onPressed: _updateTrip,
           ),
         ],

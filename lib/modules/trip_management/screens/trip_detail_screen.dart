@@ -15,6 +15,9 @@ import '../services/trip_service.dart';
 import '../services/itinerary_service.dart';
 import 'map_explorer_screen.dart';
 import 'edit_trip_screen.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -178,14 +181,15 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.trip.title),
+        iconTheme: IconThemeData(color: Colors.blue), // Back button
         actions: [
           IconButton(
-            icon: const Icon(Icons.explore),
+            icon: const Icon(Icons.explore, color: Colors.blue),
             onPressed: _navigateToMapExplorer,
             tooltip: 'Explorer sur la carte',
           ),
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.edit, color: Colors.blue),
             onPressed: _navigateToEditTrip,
             tooltip: 'Modifier le voyage',
           ),
@@ -288,15 +292,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   Future<void> _downloadPdf() async {
     try {
-      // Request storage permission
-      if (Platform.isAndroid) {
-        final status = await Permission.storage.request();
-        if (!status.isGranted) {
-          _showError('Permission de stockage refusée');
-          return;
-        }
-      }
-
       // Show loading
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -312,7 +307,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
           build: (context) => [
-            // Title
             pw.Text(
               'Résumé du Voyage',
               style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
@@ -320,8 +314,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             pw.SizedBox(height: 20),
             pw.Divider(thickness: 2),
             pw.SizedBox(height: 20),
-
-            // Trip Info
             pw.Text(
               widget.trip.title,
               style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
@@ -363,14 +355,11 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               pw.Text(widget.trip.description!, style: const pw.TextStyle(fontSize: 12)),
             ],
             pw.SizedBox(height: 24),
-
-            // Places Section
             pw.Text(
               'Lieux visités (${placesSorted.length})',
               style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
             ),
             pw.SizedBox(height: 12),
-
             if (placesSorted.isEmpty)
               pw.Text('Aucun lieu enregistré.', style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey))
             else
@@ -391,7 +380,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     ],
                 ],
               ),
-
             pw.SizedBox(height: 24),
             pw.Divider(),
             pw.SizedBox(height: 8),
@@ -403,41 +391,55 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         ),
       );
 
-      // Save to Downloads folder
-      Directory? directory;
-      if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists()) {
-          directory = await getExternalStorageDirectory();
-        }
-      } else if (Platform.isIOS) {
-        directory = await getApplicationDocumentsDirectory();
+      // Save PDF to app storage
+      final directory = await getApplicationDocumentsDirectory();
+      final pdfsDir = Directory('${directory.path}/PDFs');
+      if (!await pdfsDir.exists()) {
+        await pdfsDir.create(recursive: true);
       }
 
-      if (directory == null) {
-        _showError('Impossible de trouver le dossier de téléchargement');
-        return;
-      }
-
-      final fileName = 'voyage_${widget.trip.title.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      final file = File('${directory.path}/$fileName');
+      final fileName = 'voyage_${widget.trip.title.replaceAll(' ', '_')}.pdf';
+      final file = File('${pdfsDir.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
 
+      // ✅ SHARE THE PDF IMMEDIATELY
+      if (!mounted) return;
+
+      // Share the PDF file
+      await _sharePdfFile(file);
+
+    } catch (e) {
+      _showError('Erreur lors de la génération du PDF: $e');
+    }
+  }
+
+// ✅ ADD THIS NEW METHOD FOR SHARING
+  Future<void> _sharePdfFile(File file) async {
+    try {
+      // Create a temporary file in a shareable location
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/${file.uri.pathSegments.last}');
+      await tempFile.writeAsBytes(await file.readAsBytes());
+
+      // Use the share_plus package to share the file
+      // First add this import: import 'package:share_plus/share_plus.dart';
+      await Share.shareXFiles(
+        [XFile(tempFile.path)],
+        text: 'Résumé de mon voyage: ${widget.trip.title}',
+        subject: 'Voyage ${widget.trip.title}',
+      );
+
+    } catch (e) {
+      // If sharing fails, show success message without share
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('PDF enregistré: ${file.path}'),
+          content: Text('PDF généré avec succès!'),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'OK',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
+          duration: Duration(seconds: 3),
         ),
       );
-    } catch (e) {
-      _showError('Erreur lors de la génération du PDF: $e');
+      debugPrint('PDF saved to: ${file.path}');
     }
   }
 
