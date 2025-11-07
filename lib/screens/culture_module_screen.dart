@@ -221,46 +221,68 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-            );
-          },
-          tooltip: 'Back to Home',
+    final theme = Theme.of(context);
+    
+    return DefaultTabController(
+      length: 5,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+            tooltip: 'Retour à l\'accueil',
+          ),
+          title: const Text('Culture & Infos Locales', style: TextStyle(color: Colors.white)),
+          backgroundColor: Colors.blue[800],
+          iconTheme: const IconThemeData(color: Colors.white),
+          bottom: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: const [
+              Tab(icon: Icon(Icons.flag), text: 'Profil culturel'),
+              Tab(icon: Icon(Icons.translate), text: 'Expressions'),
+              Tab(icon: Icon(Icons.health_and_safety), text: 'Sécurité & Santé'),
+              Tab(icon: Icon(Icons.insights), text: 'Infos en direct'),
+              Tab(icon: Icon(Icons.recommend), text: 'Recommandations'),
+            ],
+          ),
         ),
-        title: const Text('Culture & Infos Locales'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(icon: Icon(Icons.flag), text: 'Profil culturel'),
-            Tab(icon: Icon(Icons.translate), text: 'Expressions'),
-            Tab(icon: Icon(Icons.health_and_safety), text: 'Sécurité & Santé'),
-            Tab(icon: Icon(Icons.insights), text: 'Infos en direct'),
-            Tab(icon: Icon(Icons.recommend), text: 'Recommandations'),
-          ],
-        ),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildProfilTab(),
-                _buildExpressionTab(),
-                _buildSecuriteTab(),
-                _buildLiveTab(),
-                _buildRecommendationsTab(),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF1565C0),
+                Color(0xFF0D47A1),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _onAdd,
-        child: const Icon(Icons.add),
+          ),
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                )
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildProfilTab(),
+                    _buildExpressionTab(),
+                    _buildSecuriteTab(),
+                    _buildLiveTab(),
+                    _buildRecommendationsTab(),
+                  ],
+                ),
+        ),
+        floatingActionButton: _tabController.index < 3
+            ? FloatingActionButton(
+                onPressed: _onAdd,
+                backgroundColor: Colors.white,
+                child: const Icon(Icons.add, color: Colors.blue),
+              )
+            : null,
       ),
     );
   }
@@ -276,6 +298,10 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
       case 2:
         _showSecuriteForm();
         break;
+      case 3:
+      case 4:
+        // No add action for these tabs
+        break;
     }
   }
 
@@ -286,55 +312,69 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     }
     final imageService = ImageService();
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16.0),
       itemCount: _profils.length,
       itemBuilder: (context, i) {
         final p = _profils[i];
-        return Card(
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (p.imageUrl != null)
-                imageService.isBase64Image(p.imageUrl)
-                    ? Image.memory(
-                        imageService.getBase64ImageBytes(p.imageUrl!)!,
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Image.network(
-                        p.imageUrl!,
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Container(
-                              height: 200,
-                              color: Colors.grey[300],
-                              child: const Center(child: Icon(Icons.error)),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.2)),
+          ),
+          child: Card(
+            color: Colors.transparent,
+            elevation: 0,
+            margin: EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (p.imageUrl != null)
+                  imageService.isBase64Image(p.imageUrl)
+                      ? Image.memory(
+                          imageService.getBase64ImageBytes(p.imageUrl!)!,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                      : Image.network(
+                          p.imageUrl!,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                height: 200,
+                                color: Colors.grey[300],
+                                child: const Center(child: Icon(Icons.error)),
+                              ),
+                        ),
+                ListTile(
+                  title: Text(p.pays, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  subtitle: Text(p.traditions, 
+                    maxLines: 2, 
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  trailing: _isAdmin
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.white),
+                              onPressed: () => _showProfilForm(existing: p),
                             ),
-                      ),
-              ListTile(
-                title: Text(p.pays, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(p.traditions, maxLines: 2, overflow: TextOverflow.ellipsis),
-                trailing: _isAdmin
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () => _showProfilForm(existing: p),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteProfil(p),
-                          ),
-                        ],
-                      )
-                    : null,
-              ),
-            ],
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteProfil(p),
+                            ),
+                          ],
+                        )
+                      : null,
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -358,154 +398,225 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
 
     await showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(existing == null ? 'Nouveau profil' : 'Modifier profil'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                TextField(decoration: const InputDecoration(labelText: 'Pays'), controller: paysCtrl),
-                TextField(decoration: const InputDecoration(labelText: 'Traditions'), controller: traditionsCtrl, maxLines: 2),
-                TextField(decoration: const InputDecoration(labelText: 'Gastronomie'), controller: gastronomieCtrl, maxLines: 2),
-                TextField(decoration: const InputDecoration(labelText: 'Comportements à adopter'), controller: adopterCtrl, maxLines: 2),
-                TextField(decoration: const InputDecoration(labelText: 'Comportements à éviter'), controller: eviterCtrl, maxLines: 2),
-                const SizedBox(height: 16),
-                // Image picker section
-                if (selectedImage != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: imageService.isBase64Image(selectedImage!)
-                        ? Image.memory(
-                            imageService.getBase64ImageBytes(selectedImage!)!,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.network(
-                            selectedImage!,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  height: 150,
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.error),
-                                ),
-                          ),
+      builder: (ctx) => _buildThemedDialog(
+        child: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  existing == null ? 'Nouveau profil' : 'Modifier profil',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 8),
-                ],
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await showModalBottomSheet<String>(
-                      context: context,
-                      builder: (context) => SafeArea(
-                        child: Wrap(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.photo_library),
-                              title: const Text('Choisir depuis la galerie'),
-                              onTap: () => Navigator.pop(context, 'gallery'),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.camera_alt),
-                              title: const Text('Prendre une photo'),
-                              onTap: () => Navigator.pop(context, 'camera'),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.link),
-                              title: const Text('Entrer une URL'),
-                              onTap: () => Navigator.pop(context, 'url'),
-                            ),
-                            if (selectedImage != null)
-                              ListTile(
-                                leading: const Icon(Icons.delete, color: Colors.red),
-                                title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
-                                onTap: () => Navigator.pop(context, 'delete'),
+                ),
+              ),
+              const Divider(height: 1, color: Colors.white24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 8),
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Pays'),
+                        controller: paysCtrl,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Traditions'),
+                        controller: traditionsCtrl,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Gastronomie'),
+                        controller: gastronomieCtrl,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Comportements à adopter'),
+                        controller: adopterCtrl,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Comportements à éviter'),
+                        controller: eviterCtrl,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 16),
+                      // Image picker section
+                      if (selectedImage != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: imageService.isBase64Image(selectedImage!)
+                              ? Image.memory(
+                                  imageService.getBase64ImageBytes(selectedImage!)!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.network(
+                                  selectedImage!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        height: 150,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.error),
+                                      ),
+                                ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      ElevatedButton.icon(
+                        style: _buildButtonStyle().copyWith(
+                          foregroundColor: MaterialStateProperty.all(Colors.white),
+                          textStyle: MaterialStateProperty.all(const TextStyle(color: Colors.white)),
+                        ),
+                        onPressed: () async {
+                          final result = await showModalBottomSheet<String>(
+                            context: context,
+                            builder: (context) => SafeArea(
+                              child: Wrap(
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.photo_library),
+                                    title: const Text('Choisir depuis la galerie'),
+                                    onTap: () => Navigator.pop(context, 'gallery'),
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.camera_alt),
+                                    title: const Text('Prendre une photo'),
+                                    onTap: () => Navigator.pop(context, 'camera'),
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.link),
+                                    title: const Text('Entrer une URL'),
+                                    onTap: () => Navigator.pop(context, 'url'),
+                                  ),
+                                  if (selectedImage != null)
+                                    ListTile(
+                                      leading: const Icon(Icons.delete, color: Colors.red),
+                                      title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
+                                      onTap: () => Navigator.pop(context, 'delete'),
+                                    ),
+                                ],
                               ),
-                          ],
+                            ),
+                          );
+
+                          if (result == 'gallery') {
+                            final image = await imageService.pickImageFromGallery();
+                            if (image != null) {
+                              setState(() => selectedImage = image);
+                            }
+                          } else if (result == 'camera') {
+                            final image = await imageService.takePhoto();
+                            if (image != null) {
+                              setState(() => selectedImage = image);
+                            }
+                          } else if (result == 'url') {
+                            final urlCtrl = TextEditingController(text: selectedImage ?? '');
+                            final url = await showDialog<String>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('URL de l\'image'),
+                                content: TextField(
+                                  controller: urlCtrl,
+                                  decoration: const InputDecoration(
+                                    hintText: 'https://...',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Annuler'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, urlCtrl.text),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (url != null && url.isNotEmpty) {
+                              setState(() => selectedImage = url);
+                            }
+                          } else if (result == 'delete') {
+                            setState(() => selectedImage = null);
+                          }
+                        },
+                        icon: const Icon(Icons.image, color: Colors.white),
+                        label: Text(
+                          selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image',
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ),
-                    );
-
-                    if (result == 'gallery') {
-                      final image = await imageService.pickImageFromGallery();
-                      if (image != null) {
-                        setState(() => selectedImage = image);
-                      }
-                    } else if (result == 'camera') {
-                      final image = await imageService.takePhoto();
-                      if (image != null) {
-                        setState(() => selectedImage = image);
-                      }
-                    } else if (result == 'url') {
-                      final urlCtrl = TextEditingController(text: selectedImage ?? '');
-                      final url = await showDialog<String>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('URL de l\'image'),
-                          content: TextField(
-                            controller: urlCtrl,
-                            decoration: const InputDecoration(
-                              hintText: 'https://...',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Annuler'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, urlCtrl.text),
-                              child: const Text('OK'),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (url != null && url.isNotEmpty) {
-                        setState(() => selectedImage = url);
-                      }
-                    } else if (result == 'delete') {
-                      setState(() => selectedImage = null);
-                    }
-                  },
-                  icon: const Icon(Icons.image),
-                  label: Text(selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image'),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+              const Divider(height: 1, color: Colors.white24),
+              // Boutons d'action
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: const Text('ANNULER'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: _buildButtonStyle(),
+                      onPressed: () async {
+                        final item = ProfilCulturel(
+                          id: existing?.id,
+                          pays: paysCtrl.text.trim(),
+                          traditions: traditionsCtrl.text.trim(),
+                          gastronomie: gastronomieCtrl.text.trim(),
+                          comportementsAAdopter: adopterCtrl.text.trim(),
+                          comportementsAEviter: eviterCtrl.text.trim(),
+                          imageUrl: selectedImage,
+                        );
+                        if (existing == null) {
+                          await _profilService.create(item);
+                        } else {
+                          await _profilService.update(item);
+                        }
+                        if (!mounted) return;
+                        Navigator.pop(ctx);
+                        await _loadAll();
+                      },
+                      child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-            ElevatedButton(
-              onPressed: () async {
-                final item = ProfilCulturel(
-                  id: existing?.id,
-                  pays: paysCtrl.text.trim(),
-                  traditions: traditionsCtrl.text.trim(),
-                  gastronomie: gastronomieCtrl.text.trim(),
-                  comportementsAAdopter: adopterCtrl.text.trim(),
-                  comportementsAEviter: eviterCtrl.text.trim(),
-                  imageUrl: selectedImage,
-                );
-                if (existing == null) {
-                  await _profilService.create(item);
-                } else {
-                  await _profilService.update(item);
-                }
-                if (!mounted) return;
-                Navigator.pop(ctx);
-                await _loadAll();
-              },
-              child: const Text('Enregistrer'),
-            ),
-          ],
         ),
       ),
     );
@@ -589,152 +700,229 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
 
     await showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(existing == null ? 'Nouvelle expression' : 'Modifier expression'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                TextField(decoration: const InputDecoration(labelText: 'Langue'), controller: langueCtrl),
-                TextField(decoration: const InputDecoration(labelText: 'Expression'), controller: expressionCtrl),
-                TextField(decoration: const InputDecoration(labelText: 'Traduction'), controller: traductionCtrl),
-                TextField(decoration: const InputDecoration(labelText: 'Catégorie'), controller: categorieCtrl),
-                const SizedBox(height: 16),
-                // Image picker section
-                if (selectedImage != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: imageService.isBase64Image(selectedImage!)
-                        ? Image.memory(
-                            imageService.getBase64ImageBytes(selectedImage!)!,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.network(
-                            selectedImage!,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  height: 150,
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.error),
-                                ),
-                          ),
+      builder: (ctx) => _buildThemedDialog(
+        child: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // En-tête
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  existing == null ? 'Nouvelle expression' : 'Modifier expression',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 8),
-                ],
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await showModalBottomSheet<String>(
-                      context: context,
-                      builder: (context) => SafeArea(
-                        child: Wrap(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.photo_library),
-                              title: const Text('Choisir depuis la galerie'),
-                              onTap: () => Navigator.pop(context, 'gallery'),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.camera_alt),
-                              title: const Text('Prendre une photo'),
-                              onTap: () => Navigator.pop(context, 'camera'),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.link),
-                              title: const Text('Entrer une URL'),
-                              onTap: () => Navigator.pop(context, 'url'),
-                            ),
-                            if (selectedImage != null)
-                              ListTile(
-                                leading: const Icon(Icons.delete, color: Colors.red),
-                                title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
-                                onTap: () => Navigator.pop(context, 'delete'),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-
-                    if (result == 'gallery') {
-                      final image = await imageService.pickImageFromGallery();
-                      if (image != null) {
-                        setState(() => selectedImage = image);
-                      }
-                    } else if (result == 'camera') {
-                      final image = await imageService.takePhoto();
-                      if (image != null) {
-                        setState(() => selectedImage = image);
-                      }
-                    } else if (result == 'url') {
-                      final urlCtrl = TextEditingController(text: selectedImage ?? '');
-                      final url = await showDialog<String>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('URL de l\'image'),
-                          content: TextField(
-                            controller: urlCtrl,
-                            decoration: const InputDecoration(
-                              hintText: 'https://...',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Annuler'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, urlCtrl.text),
-                              child: const Text('OK'),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (url != null && url.isNotEmpty) {
-                        setState(() => selectedImage = url);
-                      }
-                    } else if (result == 'delete') {
-                      setState(() => selectedImage = null);
-                    }
-                  },
-                  icon: const Icon(Icons.image),
-                  label: Text(selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image'),
                 ),
-              ],
-            ),
+              ),
+              const Divider(height: 1, color: Colors.white24),
+              
+              // Contenu du formulaire
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Champ Langue
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Langue'),
+                        controller: langueCtrl,
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Champ Expression
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Expression'),
+                        controller: expressionCtrl,
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Champ Traduction
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Traduction'),
+                        controller: traductionCtrl,
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Champ Catégorie
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Catégorie'),
+                        controller: categorieCtrl,
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Section image
+                      if (selectedImage != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: imageService.isBase64Image(selectedImage!)
+                              ? Image.memory(
+                                  imageService.getBase64ImageBytes(selectedImage!)!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.network(
+                                  selectedImage!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        height: 150,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.error),
+                                      ),
+                                ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      
+                      // Bouton d'ajout d'image
+                      ElevatedButton.icon(
+                        style: _buildButtonStyle().copyWith(
+                          foregroundColor: MaterialStateProperty.all(Colors.white),
+                          textStyle: MaterialStateProperty.all(const TextStyle(color: Colors.white)),
+                        ),
+                        onPressed: () async {
+                          final result = await showModalBottomSheet<String>(
+                            context: context,
+                            builder: (context) => SafeArea(
+                              child: Wrap(
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.photo_library),
+                                    title: const Text('Choisir depuis la galerie'),
+                                    onTap: () => Navigator.pop(context, 'gallery'),
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.camera_alt),
+                                    title: const Text('Prendre une photo'),
+                                    onTap: () => Navigator.pop(context, 'camera'),
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.link),
+                                    title: const Text('Entrer une URL'),
+                                    onTap: () => Navigator.pop(context, 'url'),
+                                  ),
+                                  if (selectedImage != null)
+                                    ListTile(
+                                      leading: const Icon(Icons.delete, color: Colors.red),
+                                      title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
+                                      onTap: () => Navigator.pop(context, 'delete'),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+
+                          if (result == 'gallery') {
+                            final image = await imageService.pickImageFromGallery();
+                            if (image != null) {
+                              setState(() => selectedImage = image);
+                            }
+                          } else if (result == 'camera') {
+                            final image = await imageService.takePhoto();
+                            if (image != null) {
+                              setState(() => selectedImage = image);
+                            }
+                          } else if (result == 'url') {
+                            final urlCtrl = TextEditingController(text: selectedImage ?? '');
+                            final url = await showDialog<String>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('URL de l\'image'),
+                                content: TextField(
+                                  controller: urlCtrl,
+                                  decoration: const InputDecoration(
+                                    hintText: 'https://...',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Annuler'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, urlCtrl.text),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (url != null && url.isNotEmpty) {
+                              setState(() => selectedImage = url);
+                            }
+                          } else if (result == 'delete') {
+                            setState(() => selectedImage = null);
+                          }
+                        },
+                        icon: const Icon(Icons.image),
+                        label: Text(selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Pied de page avec boutons
+              const Divider(height: 1, color: Colors.white24),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Bouton Annuler
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: const Text('ANNULER'),
+                    ),
+                    const SizedBox(width: 8),
+                    
+                    // Bouton Enregistrer
+                    ElevatedButton(
+                      style: _buildButtonStyle(),
+                      onPressed: () async {
+                        final item = ExpressionLocale(
+                          id: existing?.id,
+                          langue: langueCtrl.text.trim(),
+                          expression: expressionCtrl.text.trim(),
+                          traduction: traductionCtrl.text.trim(),
+                          categorie: categorieCtrl.text.trim(),
+                          imageUrl: selectedImage,
+                        );
+                        
+                        if (existing == null) {
+                          await _exprService.create(item);
+                        } else {
+                          await _exprService.update(item);
+                        }
+                        
+                        if (!mounted) return;
+                        Navigator.pop(ctx);
+                        await _loadAll();
+                      },
+                      child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-            ElevatedButton(
-              onPressed: () async {
-                final item = ExpressionLocale(
-                  id: existing?.id,
-                  langue: langueCtrl.text.trim(),
-                  expression: expressionCtrl.text.trim(),
-                  traduction: traductionCtrl.text.trim(),
-                  categorie: categorieCtrl.text.trim(),
-                  imageUrl: selectedImage,
-                );
-                if (existing == null) {
-                  await _exprService.create(item);
-                } else {
-                  await _exprService.update(item);
-                }
-                if (!mounted) return;
-                Navigator.pop(ctx);
-                await _loadAll();
-              },
-              child: const Text('Enregistrer'),
-            ),
-          ],
         ),
       ),
     );
@@ -819,169 +1007,375 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
 
     await showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(existing == null ? 'Nouvelle fiche' : 'Modifier fiche'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                TextField(decoration: const InputDecoration(labelText: 'Pays'), controller: paysCtrl),
-                TextField(decoration: const InputDecoration(labelText: 'Vaccins recommandés'), controller: vaccinsCtrl, maxLines: 2),
-                TextField(decoration: const InputDecoration(labelText: 'Précautions générales'), controller: precautCtrl, maxLines: 2),
-                TextField(decoration: const InputDecoration(labelText: 'Zones à risque'), controller: zonesCtrl, maxLines: 2),
-                TextField(decoration: const InputDecoration(labelText: 'Contact d\'urgence'), controller: urgenceCtrl),
-                const SizedBox(height: 16),
-                // Image picker section
-                if (selectedImage != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: imageService.isBase64Image(selectedImage!)
-                        ? Image.memory(
-                            imageService.getBase64ImageBytes(selectedImage!)!,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.network(
-                            selectedImage!,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  height: 150,
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.error),
-                                ),
-                          ),
+      builder: (ctx) => _buildThemedDialog(
+        child: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  existing == null ? 'Nouvelle fiche sécurité/santé' : 'Modifier fiche sécurité/santé',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 8),
-                ],
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await showModalBottomSheet<String>(
-                      context: context,
-                      builder: (context) => SafeArea(
-                        child: Wrap(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.photo_library),
-                              title: const Text('Choisir depuis la galerie'),
-                              onTap: () => Navigator.pop(context, 'gallery'),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.camera_alt),
-                              title: const Text('Prendre une photo'),
-                              onTap: () => Navigator.pop(context, 'camera'),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.link),
-                              title: const Text('Entrer une URL'),
-                              onTap: () => Navigator.pop(context, 'url'),
-                            ),
-                            if (selectedImage != null)
-                              ListTile(
-                                leading: const Icon(Icons.delete, color: Colors.red),
-                                title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
-                                onTap: () => Navigator.pop(context, 'delete'),
-                              ),
-                          ],
+                ),
+              ),
+              const Divider(height: 1, color: Colors.white24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Pays'),
+                        controller: paysCtrl,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Vaccins recommandés'),
+                        controller: vaccinsCtrl,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Précautions générales'),
+                        controller: precautCtrl,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Zones à risque'),
+                        controller: zonesCtrl,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _buildInputDecoration('Contact d\'urgence'),
+                        controller: urgenceCtrl,
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Section image
+                      if (selectedImage != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: imageService.isBase64Image(selectedImage!)
+                              ? Image.memory(
+                                  imageService.getBase64ImageBytes(selectedImage!)!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.network(
+                                  selectedImage!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        height: 150,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.error, color: Colors.white),
+                                      ),
+                                ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      
+                      // Boutons d'action pour l'image
+                      const Text(
+                        'Sélectionner une image',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    );
-
-                    if (result == 'gallery') {
-                      final image = await imageService.pickImageFromGallery();
-                      if (image != null) {
-                        setState(() => selectedImage = image);
-                      }
-                    } else if (result == 'camera') {
-                      final image = await imageService.takePhoto();
-                      if (image != null) {
-                        setState(() => selectedImage = image);
-                      }
-                    } else if (result == 'url') {
-                      final urlCtrl = TextEditingController(text: selectedImage ?? '');
-                      final url = await showDialog<String>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('URL de l\'image'),
-                          content: TextField(
-                            controller: urlCtrl,
-                            decoration: const InputDecoration(
-                              hintText: 'https://...',
-                              border: OutlineInputBorder(),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 4.0),
+                              child: ElevatedButton.icon(
+                                style: _buildButtonStyle(),
+                                icon: const Icon(Icons.photo_library, size: 18, color: Colors.white),
+                                label: const Text('Galerie', style: TextStyle(fontSize: 13, color: Colors.white)),
+                                onPressed: () async {
+                                  final image = await imageService.pickImageFromGallery();
+                                  if (image != null) {
+                                    setState(() => selectedImage = image);
+                                  }
+                                },
+                              ),
                             ),
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Annuler'),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                              child: ElevatedButton.icon(
+                                style: _buildButtonStyle(),
+                                icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                                label: const Text('Appareil', style: TextStyle(fontSize: 13, color: Colors.white)),
+                                onPressed: () async {
+                                  final image = await imageService.takePhoto();
+                                  if (image != null) {
+                                    setState(() => selectedImage = image);
+                                  }
+                                },
+                              ),
                             ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, urlCtrl.text),
-                              child: const Text('OK'),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 4.0),
+                              child: ElevatedButton.icon(
+                                style: _buildButtonStyle(),
+                                icon: const Icon(Icons.link, size: 18, color: Colors.white),
+                                label: const Text('URL', style: TextStyle(fontSize: 13, color: Colors.white)),
+                                onPressed: () async {
+                                  final url = await showDialog<String>(
+                                    context: context,
+                                    builder: (context) => _buildThemedDialog(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          const Padding(
+                                            padding: EdgeInsets.all(16.0),
+                                            child: Text(
+                                              'URL de l\'image',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: TextField(
+                                              style: const TextStyle(color: Colors.white),
+                                              controller: TextEditingController(text: selectedImage ?? ''),
+                                              decoration: _buildInputDecoration('Entrez l\'URL de l\'image'),
+                                              onSubmitted: (value) {
+                                                Navigator.pop(context, value);
+                                              },
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.end,
+                                              children: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(context),
+                                                  child: const Text('ANNULER', style: TextStyle(color: Colors.white70)),
+                                                ),
+                                                const SizedBox(width: 16),
+                                                ElevatedButton(
+                                                  style: _buildButtonStyle(),
+                                                  onPressed: () {
+                                                    Navigator.pop(context, selectedImage);
+                                                  },
+                                                  child: const Text('OK', style: TextStyle(color: Colors.white)),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                  if (url != null && url.isNotEmpty) {
+                                    setState(() => selectedImage = url);
+                                  }
+                                },
+                              ),
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      if (selectedImage != null) ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.delete, color: Colors.red, size: 18),
+                            label: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red, fontSize: 13)),
+                            onPressed: () => setState(() => selectedImage = null),
+                          ),
                         ),
-                      );
-                      if (url != null && url.isNotEmpty) {
-                        setState(() => selectedImage = url);
-                      }
-                    } else if (result == 'delete') {
-                      setState(() => selectedImage = null);
-                    }
-                  },
-                  icon: const Icon(Icons.image),
-                  label: Text(selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image'),
+                      ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+              const Divider(height: 1, color: Colors.white24),
+              // Boutons d'action
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: const Text('ANNULER'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: _buildButtonStyle(),
+                      onPressed: () async {
+                        final item = SecuriteSante(
+                          id: existing?.id,
+                          pays: paysCtrl.text.trim(),
+                          vaccinsRecommandes: vaccinsCtrl.text.trim(),
+                          precautionsGenerales: precautCtrl.text.trim(),
+                          zonesARisque: zonesCtrl.text.trim(),
+                          urgenceContact: urgenceCtrl.text.trim(),
+                          imageUrl: selectedImage,
+                        );
+                        if (existing == null) {
+                          await _secService.create(item);
+                        } else {
+                          await _secService.update(item);
+                        }
+                        if (!mounted) return;
+                        Navigator.pop(ctx);
+                        await _loadAll();
+                      },
+                      child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-            ElevatedButton(
-              onPressed: () async {
-                final item = SecuriteSante(
-                  id: existing?.id,
-                  pays: paysCtrl.text.trim(),
-                  vaccinsRecommandes: vaccinsCtrl.text.trim(),
-                  precautionsGenerales: precautCtrl.text.trim(),
-                  zonesARisque: zonesCtrl.text.trim(),
-                  urgenceContact: urgenceCtrl.text.trim(),
-                  imageUrl: selectedImage,
-                );
-                if (existing == null) {
-                  await _secService.create(item);
-                } else {
-                  await _secService.update(item);
-                }
-                if (!mounted) return;
-                Navigator.pop(ctx);
-                await _loadAll();
-              },
-              child: const Text('Enregistrer'),
-            ),
-          ],
         ),
+      ),
+    );
+  }
+
+  // Style pour les champs de formulaire
+  InputDecoration _buildInputDecoration(String label) {
+    const double radius = 8.0;
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white70),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.white),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.1),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    );
+  }
+
+  // Style pour les boutons
+  ButtonStyle _buildButtonStyle({Color? backgroundColor}) {
+    const double radius = 8.0;
+    return ElevatedButton.styleFrom(
+      backgroundColor: backgroundColor ?? Colors.blue[700],
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+
+  // Style pour les boîtes de dialogue
+  Widget _buildThemedDialog({required Widget child}) {
+    const double radius = 8.0;
+    return Theme(
+      data: Theme.of(context).copyWith(
+        dialogBackgroundColor: const Color(0xFF0D47A1),
+        textTheme: Theme.of(context).textTheme.apply(
+              bodyColor: Colors.white,
+              displayColor: Colors.white,
+            ),
+        inputDecorationTheme: InputDecorationTheme(
+          labelStyle: const TextStyle(color: Colors.white70),
+          hintStyle: const TextStyle(color: Colors.white54),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(radius),
+            borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(radius),
+            borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(radius),
+            borderSide: const BorderSide(color: Colors.white),
+          ),
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.1),
+        ),
+      ),
+      child: Dialog(
+        backgroundColor: const Color(0xFF0D47A1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0), // Utilisation d'un littéral double
+          side: BorderSide(color: Colors.white.withOpacity(0.2)),
+        ),
+        child: child,
       ),
     );
   }
 
   Widget _buildEmpty(String text) {
     return Center(
-      child: Text(text, style: const TextStyle(color: Colors.grey)),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 48,
+            color: Colors.white.withOpacity(0.7),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            text,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
   // Live tab
   Widget _buildLiveTab() {
+    final theme = Theme.of(context);
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -995,37 +1389,103 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                 style: TextStyle(fontSize: 12),
               ),
             ),
-          Text('Taux de change', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _fromCtrl,
-                  decoration: const InputDecoration(labelText: 'De (ex: USD)'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _toCtrl,
-                  decoration: const InputDecoration(labelText: 'Vers (ex: EUR)'),
-                ),
-              ),
-            ],
+          Text(
+            'Taux de change',
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _amountCtrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Montant'),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: _convLoading ? null : _doConvert,
-            child: _convLoading
-                ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Convertir'),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _fromCtrl,
+                          style: theme.textTheme.bodyLarge,
+                          decoration: InputDecoration(
+                            labelText: 'De (ex: USD)',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.swap_horiz, size: 32, color: Colors.grey),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _toCtrl,
+                          style: theme.textTheme.bodyLarge,
+                          decoration: InputDecoration(
+                            labelText: 'Vers (ex: EUR)',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _amountCtrl,
+                    keyboardType: TextInputType.number,
+                    style: theme.textTheme.bodyLarge,
+                    decoration: InputDecoration(
+                      labelText: 'Montant',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                      prefixIcon: const Icon(Icons.monetization_on_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _convLoading ? null : _doConvert,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: _convLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'Convertir',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ],
+              ),
+            ),
           ),
           if (_convError != null)
             Padding(
