@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
@@ -177,112 +178,243 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final daysDifference = widget.trip.endDate.difference(widget.trip.startDate).inDays;
+    final double totalEstimated = _places.fold<double>(0.0, (s, p) => s + ((p.price) ?? 0.0));
+    final double budget = widget.trip.budget;
+    final double remaining = budget - totalEstimated;
+    final double ratio = budget > 0 ? (totalEstimated / budget).clamp(0.0, 1.0) : 0.0;
+    final Color progressColor = totalEstimated >= budget
+        ? Colors.red
+        : (ratio > 0.7 ? Colors.amber : Colors.green);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(widget.trip.title),
-        iconTheme: IconThemeData(color: Colors.blue), // Back button
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          widget.trip.title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.explore, color: Colors.blue),
+            icon: const Icon(Icons.explore, color: Colors.white),
             onPressed: _navigateToMapExplorer,
             tooltip: 'Explorer sur la carte',
           ),
           IconButton(
-            icon: const Icon(Icons.edit, color: Colors.blue),
+            icon: const Icon(Icons.edit, color: Colors.white),
             onPressed: _navigateToEditTrip,
-            tooltip: 'Modifier le voyage',
+            tooltip: 'Modifier la trajectoire',
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Header Info
-                  Card(
-                    margin: const EdgeInsets.all(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.trip.destination,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Du ${_formatDate(widget.trip.startDate)} au ${_formatDate(widget.trip.endDate)}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.access_time, size: 18, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Durée: $daysDifference jours',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                          if (widget.trip.description != null) ...[
-                            const SizedBox(height: 12),
-                            const Divider(),
-                            const SizedBox(height: 8),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0D47A1),
+              Color(0xFF1976D2),
+              Color(0xFF42A5F5),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Colors.white))
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Header Info (translucent card)
+                      Container(
+                        margin: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              widget.trip.description!,
-                              style: const TextStyle(fontSize: 15, color: Colors.black87),
+                              widget.trip.destination,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today, size: 18, color: Colors.white70),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Du ${_formatDate(widget.trip.startDate)} au ${_formatDate(widget.trip.endDate)}',
+                                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.access_time, size: 18, color: Colors.white70),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Durée: $daysDifference jours',
+                                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                                ),
+                              ],
+                            ),
+                            if (widget.trip.description != null) ...[
+                              const SizedBox(height: 12),
+                              Divider(color: Colors.white.withOpacity(0.3)),
+                              const SizedBox(height: 8),
+                              Text(
+                                widget.trip.description!,
+                                style: const TextStyle(fontSize: 15, color: Colors.white70),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Map Section
-                  Container(
-                    height: 400,
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: _buildPlacesMap(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Download PDF Button
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: ElevatedButton.icon(
-                      onPressed: _downloadPdf,
-                      icon: const Icon(Icons.picture_as_pdf),
-                      label: const Text('Télécharger le PDF du voyage'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 56),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                    ),
+
+                      // Budget Summary
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Budget',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Prévu', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                      Text('\$${budget.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      const Text('Estimation', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                      Text('\$${totalEstimated.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      const Text('Restant', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                      Text('\$${remaining.toStringAsFixed(2)}', style: TextStyle(color: remaining < 0 ? Colors.red[200] : Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: LinearProgressIndicator(
+                                value: ratio,
+                                minHeight: 8,
+                                backgroundColor: Colors.white.withOpacity(0.2),
+                                color: progressColor,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: ElevatedButton.icon(
+                                onPressed: _addDummyPlaces,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Ajouter lieux fictifs'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF0D47A1),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                            if (remaining < 0) ...[
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Attention: estimation au-delà du budget.',
+                                style: TextStyle(color: Colors.redAccent, fontSize: 12),
+                              ),
+                            ]
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Map Section
+                      Container(
+                        height: 400,
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: _buildPlacesMap(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Download PDF Button
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: ElevatedButton.icon(
+                          onPressed: _downloadPdf,
+                          icon: const Icon(Icons.picture_as_pdf),
+                          label: const Text('Télécharger le PDF du trajectoire'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF0D47A1),
+                            minimumSize: const Size(double.infinity, 56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+        ),
+      ),
     );
   }
 
@@ -301,6 +433,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       // Generate PDF
       final pdf = pw.Document();
       final placesSorted = [..._places]..sort((a, b) => a.visitDate.compareTo(b.visitDate));
+      final double pdfTotalEstimated = _places.fold<double>(0.0, (s, p) => s + ((p.price) ?? 0.0));
+      final double pdfBudget = widget.trip.budget;
+      final double pdfRemaining = pdfBudget - pdfTotalEstimated;
 
       pdf.addPage(
         pw.MultiPage(
@@ -354,6 +489,38 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               pw.SizedBox(height: 4),
               pw.Text(widget.trip.description!, style: const pw.TextStyle(fontSize: 12)),
             ],
+            pw.SizedBox(height: 16),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey200,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('Budget', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
+                  pw.SizedBox(height: 8),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                        pw.Text('Prévu', style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
+                        pw.Text('\$${pdfBudget.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+                      ]),
+                      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
+                        pw.Text('Estimation', style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
+                        pw.Text('\$${pdfTotalEstimated.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+                      ]),
+                      pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
+                        pw.Text('Restant', style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
+                        pw.Text('\$${pdfRemaining.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: pdfRemaining < 0 ? PdfColors.red : PdfColors.green800)),
+                      ]),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             pw.SizedBox(height: 24),
             pw.Text(
               'Lieux visités (${placesSorted.length})',
@@ -441,6 +608,47 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       );
       debugPrint('PDF saved to: ${file.path}');
     }
+  }
+
+  // Add a few dummy places with random prices and nearby coordinates
+  Future<void> _addDummyPlaces() async {
+    if (widget.trip.id == null) return;
+    final r = Random();
+    final baseLat = 36.8065; // Tunis center
+    final baseLng = 10.1815;
+    final types = ['restaurant', 'hotel', 'museum', 'activity'];
+    final names = ['Café Medina', 'Hotel Azur', 'Musée Carthage', 'Excursion Sahara', 'Marina Bistro'];
+
+    final toAdd = List.generate(3 + r.nextInt(3), (i) {
+      final lat = baseLat + (r.nextDouble() - 0.5) * 0.2; // ~±0.1°
+      final lng = baseLng + (r.nextDouble() - 0.5) * 0.2;
+      final price = (10 + r.nextInt(190)).toDouble(); // 10..199
+      final type = types[r.nextInt(types.length)];
+      final name = names[r.nextInt(names.length)];
+
+      return Place(
+        name: name,
+        address: 'Adresse fictive',
+        latitude: lat,
+        longitude: lng,
+        type: type,
+        price: price,
+        tripId: widget.trip.id!,
+        visitDate: DateTime.now().add(Duration(days: i)),
+        rating: 4,
+        notes: 'Lieu ajouté pour test',
+      );
+    });
+
+    for (final p in toAdd) {
+      await _tripService.addPlace(p);
+    }
+
+    if (!mounted) return;
+    await _loadTripData();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Lieux fictifs ajoutés')),
+    );
   }
 
   // Embedded OSM map with markers and polyline built from _places

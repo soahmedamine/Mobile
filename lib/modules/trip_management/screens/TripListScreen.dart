@@ -67,7 +67,7 @@ class _TripListScreenState extends State<TripListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer le voyage'),
+        title: const Text('Supprimer le trajectoire'),
         content: Text('Êtes-vous sûr de vouloir supprimer "${trip.title}"?'),
         actions: [
           TextButton(
@@ -98,61 +98,114 @@ class _TripListScreenState extends State<TripListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Mes Trajectoires'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Mes Trajectoires',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 22,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add, color: Colors.white),
             onPressed: _createNewTrip,
             tooltip: 'Créer un nouveau Trajectoires',
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _trips.isEmpty
-          ? _buildEmptyState()
-          : _buildTripsList(),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0D47A1),
+              Color(0xFF1976D2),
+              Color(0xFF42A5F5),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Colors.white))
+              : _trips.isEmpty
+                  ? _buildEmptyState()
+                  : _buildTripsList(),
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _createNewTrip,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF0D47A1),
         child: const Icon(Icons.add),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.flight_takeoff, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 20),
-          const Text(
-            'Aucun Trajectoires créé',
-            style: TextStyle(fontSize: 20, color: Colors.grey),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Commencez par créer votre premier Trajectoires !',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: _createNewTrip,
-            icon: const Icon(Icons.add),
-            label: const Text('Créer mon premier Trajectoires'),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.flight_takeoff, size: 48, color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Aucun Trajectoires créé',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Commencez par créer votre premier Trajectoires !',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _createNewTrip,
+              icon: const Icon(Icons.add),
+              label: const Text('Créer mon premier Trajectoires'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF0D47A1),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildTripsList() {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       itemCount: _trips.length,
       itemBuilder: (context, index) {
         final trip = _trips[index];

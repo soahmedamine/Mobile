@@ -19,91 +19,124 @@ class TripCard extends StatelessWidget {
     final isCurrentTrip = DateTime.now().isAfter(trip.startDate) &&
         DateTime.now().isBefore(trip.endDate);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isCurrentTrip ? Colors.green.withOpacity(0.2) : Colors.blue.withOpacity(0.2),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            isCurrentTrip ? Icons.flight_takeoff : Icons.flight_land,
-            color: isCurrentTrip ? Colors.green : Colors.blue,
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
         ),
-        title: Text(
-          trip.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              trip.destination,
-              style: TextStyle(
-                color: Colors.blue[700],
-                fontWeight: FontWeight.w500,
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (isCurrentTrip ? Colors.green : Colors.blue).withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isCurrentTrip ? Icons.flight_takeoff : Icons.flight_land,
+                color: isCurrentTrip ? Colors.green : Colors.blue,
+                size: 22,
               ),
             ),
-            const SizedBox(height: 4),
-            Text('${_formatDate(trip.startDate)} - ${_formatDate(trip.endDate)}'),
-            Text('$daysDifference jours • Budget: \$${trip.budget.toStringAsFixed(2)}'),
-            if (isCurrentTrip)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'En cours',
-                  style: TextStyle(
-                    color: Colors.green[700],
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          trip.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, color: Colors.white70),
+                        onSelected: (value) {
+                          if (value == 'delete') {
+                            onDelete();
+                          } else if (value == 'edit') {
+                            onTap();
+                          }
+                        },
+                        itemBuilder: (BuildContext context) => const [
+                          PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, size: 20),
+                                SizedBox(width: 8),
+                                Text('Modifier'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete, color: Colors.red, size: 20),
+                                SizedBox(width: 8),
+                                Text('Supprimer', style: TextStyle(color: Colors.red)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ),
-              ),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          onSelected: (value) {
-            if (value == 'delete') {
-              onDelete();
-            } else if (value == 'edit') {
-              onTap();
-            }
-          },
-          itemBuilder: (BuildContext context) => [
-            const PopupMenuItem<String>(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit, size: 20),
-                  SizedBox(width: 8),
-                  Text('Modifier'),
+                  const SizedBox(height: 6),
+                  Text(
+                    trip.destination,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${_formatDate(trip.startDate)} - ${_formatDate(trip.endDate)}',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  Text(
+                    '$daysDifference jours • Budget: \$${trip.budget.toStringAsFixed(2)}',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  if (isCurrentTrip)
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'En cours',
+                        style: TextStyle(
+                          color: Colors.green[300],
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
-            const PopupMenuItem<String>(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, color: Colors.red, size: 20),
-                  SizedBox(width: 8),
-                  Text('Supprimer', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
           ],
         ),
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
     );
   }
