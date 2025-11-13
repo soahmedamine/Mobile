@@ -194,28 +194,69 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
     // Vérifier que les coordonnées sont définies
     if (_latitude == null || _longitude == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner un emplacement sur la carte')),
+        const SnackBar(
+          content: Text('Veuillez sélectionner un emplacement sur la carte'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
+    }
+
+    // Vérification de cohérence: capacité vs chambres
+    final chambres = int.parse(_chambresController.text);
+    final capacite = int.parse(_capaciteController.text);
+    if (capacite < chambres) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('La capacité doit être au moins égale au nombre de chambres'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Validation logique: ratio capacité/chambres
+    if (capacite > chambres * 6) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('⚠️ Attention'),
+          content: Text(
+            'La capacité ($capacite personnes) semble élevée pour $chambres chambre(s). '
+            'Voulez-vous continuer?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Continuer'),
+            ),
+          ],
+        ),
+      );
+      if (shouldContinue != true) return;
     }
 
     try {
       final logement = Logement(
         id: widget.logement?.id,
-        nom: _nomController.text,
+        nom: _nomController.text.trim(),
         type: _selectedType,
-        adresse: _adresseController.text,
+        adresse: _adresseController.text.trim(),
         latitude: _latitude!,
         longitude: _longitude!,
-        description: _descriptionController.text,
+        description: _descriptionController.text.trim(),
         prixParNuit: double.parse(_prixController.text),
-        nombreChambres: int.parse(_chambresController.text),
-        capacitePersonnes: int.parse(_capaciteController.text),
+        nombreChambres: chambres,
+        capacitePersonnes: capacite,
         imageUrl: _selectedImage,
         commodites: _selectedCommodites,
         note: _noteController.text.isEmpty ? null : double.parse(_noteController.text),
-        telephone: _telephoneController.text.isEmpty ? null : _telephoneController.text,
-        email: _emailController.text.isEmpty ? null : _emailController.text,
+        telephone: _telephoneController.text.isEmpty ? null : _telephoneController.text.trim(),
+        email: _emailController.text.isEmpty ? null : _emailController.text.trim().toLowerCase(),
         disponible: _disponible,
         dateAjout: widget.logement?.dateAjout,
       );
@@ -235,13 +276,17 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
                   ? 'Logement ajouté avec succès'
                   : 'Logement modifié avec succès',
             ),
+            backgroundColor: Colors.green,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -316,10 +361,18 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
                 labelText: 'Nom du logement *',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.home),
+                helperText: 'Minimum 3 caractères',
               ),
+              maxLength: 100,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Veuillez entrer un nom';
+                }
+                if (value.trim().length < 3) {
+                  return 'Le nom doit contenir au moins 3 caractères';
+                }
+                if (value.trim().length > 100) {
+                  return 'Le nom ne doit pas dépasser 100 caractères';
                 }
                 return null;
               },
@@ -334,11 +387,16 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
                 labelText: 'Adresse *',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.location_on),
+                helperText: 'Minimum 10 caractères',
               ),
               maxLines: 2,
+              maxLength: 200,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Veuillez entrer une adresse';
+                }
+                if (value.trim().length < 10) {
+                  return 'L\'adresse doit contenir au moins 10 caractères';
                 }
                 return null;
               },
@@ -368,11 +426,16 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.description),
                 alignLabelWithHint: true,
+                helperText: 'Minimum 20 caractères',
               ),
               maxLines: 4,
+              maxLength: 500,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Veuillez entrer une description';
+                }
+                if (value.trim().length < 20) {
+                  return 'La description doit contenir au moins 20 caractères';
                 }
                 return null;
               },
@@ -387,14 +450,25 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
                 labelText: 'Prix par nuit (DT) *',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.attach_money),
+                helperText: 'Entre 10 et 10000 DT',
               ),
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Veuillez entrer un prix';
                 }
-                if (double.tryParse(value) == null) {
+                final prix = double.tryParse(value);
+                if (prix == null) {
                   return 'Prix invalide';
+                }
+                if (prix <= 0) {
+                  return 'Le prix doit être positif';
+                }
+                if (prix < 10) {
+                  return 'Le prix minimum est de 10 DT';
+                }
+                if (prix > 10000) {
+                  return 'Le prix maximum est de 10000 DT';
                 }
                 return null;
               },
@@ -412,14 +486,22 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
                       labelText: 'Chambres *',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.bed),
+                      helperText: '1-50',
                     ),
                     keyboardType: TextInputType.number,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Requis';
                       }
-                      if (int.tryParse(value) == null) {
+                      final chambres = int.tryParse(value);
+                      if (chambres == null) {
                         return 'Invalide';
+                      }
+                      if (chambres < 1) {
+                        return 'Min: 1';
+                      }
+                      if (chambres > 50) {
+                        return 'Max: 50';
                       }
                       return null;
                     },
@@ -433,14 +515,22 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
                       labelText: 'Capacité *',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.people),
+                      helperText: '1-100',
                     ),
                     keyboardType: TextInputType.number,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Requis';
                       }
-                      if (int.tryParse(value) == null) {
+                      final capacite = int.tryParse(value);
+                      if (capacite == null) {
                         return 'Invalide';
+                      }
+                      if (capacite < 1) {
+                        return 'Min: 1';
+                      }
+                      if (capacite > 100) {
+                        return 'Max: 100';
                       }
                       return null;
                     },
@@ -516,8 +606,20 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
                 labelText: 'Téléphone',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.phone),
+                helperText: 'Ex: +216 XX XXX XXX ou XX XXX XXX',
               ),
               keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value != null && value.isNotEmpty) {
+                  // Supprimer les espaces pour la validation
+                  final phone = value.replaceAll(' ', '');
+                  // Vérifier le format tunisien: +216XXXXXXXX ou 8 chiffres
+                  if (!RegExp(r'^(\+216)?[0-9]{8}$').hasMatch(phone)) {
+                    return 'Format invalide (8 chiffres ou +216XXXXXXXX)';
+                  }
+                }
+                return null;
+              },
             ),
 
             const SizedBox(height: 16),
@@ -528,8 +630,18 @@ class _LogementFormScreenState extends State<LogementFormScreen> {
                 labelText: 'Email',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.email),
+                helperText: 'Ex: exemple@domaine.com',
               ),
               keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value != null && value.isNotEmpty) {
+                  // Validation du format email
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    return 'Format email invalide';
+                  }
+                }
+                return null;
+              },
             ),
 
             const SizedBox(height: 16),
