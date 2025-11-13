@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../database/database_helper_new.dart';
 import '../services/bad_word_filter.dart';
 import '../providers/alert_provider.dart';
@@ -28,11 +30,16 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
   String? _imageData;
   final _imagePicker = ImagePicker();
   
-  // Removed speech to text functionality
+  // Speech to text
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  String _lastWords = '';
+  Timer? _speechTimer;
 
   @override
   void initState() {
     super.initState();
+    _initSpeech();
     
     if (widget.note != null) {
       _subjectController.text = widget.note![DatabaseHelper.columnSubject] ?? '';
@@ -41,16 +48,166 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
     }
   }
   
-  // Speech to text functionality has been removed
-
   @override
   void dispose() {
+    _speechTimer?.cancel();
     _subjectController.dispose();
     _messageController.dispose();
     super.dispose();
   }
   
-  // Speech recognition methods have been removed
+  // Initialize speech to text
+  Future<void> _initSpeech() async {
+    await _speech.initialize(
+      onStatus: (status) {
+        setState(() {
+          _isListening = _speech.isListening;
+        });
+        if (status == 'done') {
+          _stopListening();
+        }
+      },
+      onError: (error) {
+        setState(() {
+          _isListening = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur de reconnaissance vocale: $error')),
+          );
+        }
+      },
+    );
+  }
+  
+  // Start listening to speech
+  Future<void> _startListening(TextEditingController controller) async {
+    try {
+      if (!_isListening) {
+        bool available = await _speech.initialize(
+          onStatus: (status) {
+            print('Speech recognition status: $status');
+            if (status == 'done') {
+              _stopListening();
+            }
+          },
+          onError: (error) {
+            print('Speech recognition error: $error');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Erreur: $error')),
+              );
+            }
+            _stopListening();
+          },
+        );
+
+        if (available) {
+          setState(() {
+            _isListening = true;
+            _lastWords = '';
+          });
+          
+          await _speech.listen(
+            onResult: (result) {
+              print('Speech recognition result: ${result.recognizedWords}');
+              setState(() {
+                _lastWords = result.recognizedWords;
+                controller.text = _lastWords;
+                
+                // Reset the timer on each new word
+                _speechTimer?.cancel();
+                _speechTimer = Timer(const Duration(seconds: 3), _stopListening);
+              });
+            },
+            listenFor: const Duration(seconds: 30),
+            pauseFor: const Duration(seconds: 5),
+            partialResults: true,
+            localeId: 'fr_FR',
+            listenMode: stt.ListenMode.dictation,
+            onSoundLevelChange: (level) {
+              // Optional: Add sound level visualization if needed
+            },
+          );
+          
+          // Auto-stop after 30 seconds of no speech
+          _speechTimer = Timer(const Duration(seconds: 30), _stopListening);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('La reconnaissance vocale n\'est pas disponible sur cet appareil'),
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('Error in _startListening: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+      _stopListening();
+    }
+  }
+  
+  // Stop listening to speech
+  Future<void> _stopListening() async {
+    _speechTimer?.cancel();
+    if (_isListening) {
+      try {
+        await _speech.stop();
+      } catch (e) {
+        print('Error stopping speech recognition: $e');
+      }
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+        });
+      }
+    }
+  }
+  
+  // Speech to text functionality has been removed
+
+  // Toggle speech input for a specific field
+  Future<void> _toggleListening(TextEditingController controller) async {
+    try {
+      if (_isListening) {
+        await _stopListening();
+      } else {
+        // Request microphone permission
+        bool hasPermission = await _speech.hasPermission;
+        
+        if (!hasPermission) {
+          hasPermission = await _speech.initialize();
+        }
+        
+        if (hasPermission) {
+          await _startListening(controller);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Permission du microphone non accordée'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('Error in _toggleListening: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -304,6 +461,14 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
                               labelText: 'Message *',
                               hintText: 'Décrivez votre note en détail',
                               prefixIcon: const Icon(Icons.message),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _isListening ? Icons.mic_off : Icons.mic,
+                                  color: _isListening ? Colors.red : Colors.blue,
+                                ),
+                                onPressed: () => _toggleListening(_messageController),
+                                tooltip: _isListening ? 'Arrêter la dictée' : 'Dictée vocale',
+                              ),
                               alignLabelWithHint: true,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -323,6 +488,16 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
                               return null;
                             },
                           ),
+                          if (_isListening) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Parlez maintenant...',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 16),
 
                           // Image Section

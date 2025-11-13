@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -177,7 +178,14 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   Future<void> _loadRoleAndData() async {
     final prefs = await SharedPreferences.getInstance();
     final role = prefs.getString('user_role');
-    _isAdmin = role == 'admin';
+    if (kDebugMode) {
+      print('Rôle utilisateur récupéré: $role');
+    }
+    // Forcer _isAdmin à true pour le débogage
+    _isAdmin = true;
+    if (kDebugMode) {
+      print('_isAdmin forcé à: $_isAdmin pour le débogage');
+    }
     final key = dotenv.env['OPENWEATHER_API_KEY'] ?? '';
     if (key.isNotEmpty) {
       _airService = AirQualityService(key);
@@ -222,6 +230,11 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    
+    // Ajout d'un log pour déboguer la valeur de _isAdmin
+    if (kDebugMode) {
+      print('_isAdmin: $_isAdmin');
+    }
     
     return DefaultTabController(
       length: 5,
@@ -279,8 +292,8 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
         floatingActionButton: _tabController.index < 3
             ? FloatingActionButton(
                 onPressed: _onAdd,
-                backgroundColor: Colors.white,
-                child: const Icon(Icons.add, color: Colors.blue),
+                backgroundColor: Colors.blue[800],
+                child: const Icon(Icons.add, color: Colors.white),
               )
             : null,
       ),
@@ -357,16 +370,17 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.white70),
                   ),
-                  trailing: _isAdmin
+                  trailing: _isAdmin == true
                       ? Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.white),
+                              icon: const Icon(Icons.edit, color: Colors.white, size: 30),
                               onPressed: () => _showProfilForm(existing: p),
                             ),
+                            const SizedBox(width: 8),
                             IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
+                              icon: const Icon(Icons.delete, color: Colors.red, size: 30),
                               onPressed: () => _deleteProfil(p),
                             ),
                           ],
@@ -383,8 +397,62 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
 
   Future<void> _deleteProfil(ProfilCulturel p) async {
     if (p.id == null) return;
-    await _profilService.delete(p.id!);
-    await _loadAll();
+    
+    bool confirmDelete = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression', style: TextStyle(color: Colors.white)),
+        content: const Text('Voulez-vous vraiment supprimer ce profil culturel ?', style: TextStyle(color: Colors.white70)),
+        backgroundColor: Colors.blue[800],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Non', style: TextStyle(color: Colors.white)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Oui', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    ) ?? false;
+    
+    if (confirmDelete) {
+      await _profilService.delete(p.id!);
+      await _loadAll();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil supprimé avec succès')),
+        );
+      }
+    }
+  }
+
+  // Validation pour le champ pays (profil culturel)
+  String? _validateProfilPays(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Le pays est obligatoire';
+    }
+    if (value.length < 2) {
+      return 'Le nom du pays est trop court';
+    }
+    // Vérifier si le texte contient des chiffres
+    final containsNumbers = RegExp(r'[0-9]').hasMatch(value);
+    if (containsNumbers) {
+      return 'Le nom du pays ne doit pas contenir de chiffres';
+    }
+    return null;
+  }
+
+  // Validation pour les champs texte du profil
+  String? _validateProfilTexte(String? value, String champ) {
+    if (value == null || value.isEmpty) {
+      return 'Ce champ est obligatoire';
+    }
+    if (value.length < 3) {
+      return 'Veuillez fournir plus de détails';
+    }
+    return null;
   }
 
   Future<void> _showProfilForm({ProfilCulturel? existing}) async {
@@ -395,6 +463,7 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     final eviterCtrl = TextEditingController(text: existing?.comportementsAEviter ?? '');
     String? selectedImage = existing?.imageUrl;
     final imageService = ImageService();
+    final formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
@@ -404,6 +473,7 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // En-tête
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
@@ -416,170 +486,190 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                 ),
               ),
               const Divider(height: 1, color: Colors.white24),
+              // Contenu du formulaire
               Container(
                 padding: const EdgeInsets.all(16),
                 child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 8),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Pays'),
-                        controller: paysCtrl,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Traditions'),
-                        controller: traditionsCtrl,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Gastronomie'),
-                        controller: gastronomieCtrl,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Comportements à adopter'),
-                        controller: adopterCtrl,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Comportements à éviter'),
-                        controller: eviterCtrl,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 16),
-                      // Image picker section
-                      if (selectedImage != null) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: imageService.isBase64Image(selectedImage!)
-                              ? Image.memory(
-                                  imageService.getBase64ImageBytes(selectedImage!)!,
-                                  height: 150,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.network(
-                                  selectedImage!,
-                                  height: 150,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                        height: 150,
-                                        color: Colors.grey[300],
-                                        child: const Icon(Icons.error),
-                                      ),
-                                ),
+                  child: Form(
+                    key: formKey,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Champ Pays
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Pays *'),
+                          controller: paysCtrl,
+                          validator: _validateProfilPays,
+                          keyboardType: TextInputType.text,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                      ],
-                      ElevatedButton.icon(
-                        style: _buildButtonStyle().copyWith(
-                          foregroundColor: MaterialStateProperty.all(Colors.white),
-                          textStyle: MaterialStateProperty.all(const TextStyle(color: Colors.white)),
+                        const SizedBox(height: 12),
+                        // Champ Traditions
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Traditions *'),
+                          controller: traditionsCtrl,
+                          maxLines: 2,
+                          validator: (value) => _validateProfilTexte(value, 'les traditions'),
                         ),
-                        onPressed: () async {
-                          final result = await showModalBottomSheet<String>(
-                            context: context,
-                            builder: (context) => SafeArea(
-                              child: Wrap(
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(Icons.photo_library),
-                                    title: const Text('Choisir depuis la galerie'),
-                                    onTap: () => Navigator.pop(context, 'gallery'),
+                        const SizedBox(height: 12),
+                        // Champ Gastronomie
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Gastronomie *'),
+                          controller: gastronomieCtrl,
+                          maxLines: 2,
+                          validator: (value) => _validateProfilTexte(value, 'la gastronomie'),
+                        ),
+                        const SizedBox(height: 12),
+                        // Champ Comportements à adopter
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Comportements à adopter *'),
+                          controller: adopterCtrl,
+                          maxLines: 2,
+                          validator: (value) => _validateProfilTexte(value, 'les comportements à adopter'),
+                        ),
+                        const SizedBox(height: 12),
+                        // Champ Comportements à éviter
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Comportements à éviter *'),
+                          controller: eviterCtrl,
+                          maxLines: 2,
+                          validator: (value) => _validateProfilTexte(value, 'les comportements à éviter'),
+                        ),
+                        const SizedBox(height: 16),
+                        // Section image
+                        if (selectedImage != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: imageService.isBase64Image(selectedImage!)
+                                ? Image.memory(
+                                    imageService.getBase64ImageBytes(selectedImage!)!,
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.network(
+                                    selectedImage!,
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Container(
+                                          height: 150,
+                                          color: Colors.grey[300],
+                                          child: const Icon(Icons.error),
+                                        ),
                                   ),
-                                  ListTile(
-                                    leading: const Icon(Icons.camera_alt),
-                                    title: const Text('Prendre une photo'),
-                                    onTap: () => Navigator.pop(context, 'camera'),
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.link),
-                                    title: const Text('Entrer une URL'),
-                                    onTap: () => Navigator.pop(context, 'url'),
-                                  ),
-                                  if (selectedImage != null)
-                                    ListTile(
-                                      leading: const Icon(Icons.delete, color: Colors.red),
-                                      title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
-                                      onTap: () => Navigator.pop(context, 'delete'),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-
-                          if (result == 'gallery') {
-                            final image = await imageService.pickImageFromGallery();
-                            if (image != null) {
-                              setState(() => selectedImage = image);
-                            }
-                          } else if (result == 'camera') {
-                            final image = await imageService.takePhoto();
-                            if (image != null) {
-                              setState(() => selectedImage = image);
-                            }
-                          } else if (result == 'url') {
-                            final urlCtrl = TextEditingController(text: selectedImage ?? '');
-                            final url = await showDialog<String>(
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        // Bouton d'ajout d'image
+                        ElevatedButton.icon(
+                          style: _buildButtonStyle().copyWith(
+                            backgroundColor: MaterialStateProperty.all(Colors.blue[700]),
+                            foregroundColor: MaterialStateProperty.all(Colors.white),
+                          ),
+                          onPressed: () async {
+                            final result = await showModalBottomSheet<String>(
                               context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('URL de l\'image'),
-                                content: TextField(
-                                  controller: urlCtrl,
-                                  decoration: const InputDecoration(
-                                    hintText: 'https://...',
-                                    border: OutlineInputBorder(),
-                                  ),
+                              builder: (context) => SafeArea(
+                                child: Wrap(
+                                  children: [
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_library),
+                                      title: const Text('Choisir depuis la galerie'),
+                                      onTap: () => Navigator.pop(context, 'gallery'),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.camera_alt),
+                                      title: const Text('Prendre une photo'),
+                                      onTap: () => Navigator.pop(context, 'camera'),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.link),
+                                      title: const Text('Entrer une URL'),
+                                      onTap: () => Navigator.pop(context, 'url'),
+                                    ),
+                                    if (selectedImage != null)
+                                      ListTile(
+                                        leading: const Icon(Icons.delete, color: Colors.red),
+                                        title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
+                                        onTap: () => Navigator.pop(context, 'delete'),
+                                      ),
+                                  ],
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Annuler'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context, urlCtrl.text),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
                               ),
                             );
-                            if (url != null && url.isNotEmpty) {
-                              setState(() => selectedImage = url);
+
+                            if (result == 'gallery') {
+                              final image = await imageService.pickImageFromGallery();
+                              if (image != null) {
+                                setState(() => selectedImage = image);
+                              }
+                            } else if (result == 'camera') {
+                              final image = await imageService.takePhoto();
+                              if (image != null) {
+                                setState(() => selectedImage = image);
+                              }
+                            } else if (result == 'url') {
+                              final urlCtrl = TextEditingController(text: selectedImage ?? '');
+                              final url = await showDialog<String>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('URL de l\'image'),
+                                  content: TextField(
+                                    controller: urlCtrl,
+                                    decoration: const InputDecoration(
+                                      hintText: 'https://...',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Annuler'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, urlCtrl.text),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (url != null && url.isNotEmpty) {
+                                setState(() => selectedImage = url);
+                              }
+                            } else if (result == 'delete') {
+                              setState(() => selectedImage = null);
                             }
-                          } else if (result == 'delete') {
-                            setState(() => selectedImage = null);
-                          }
-                        },
-                        icon: const Icon(Icons.image, color: Colors.white),
-                        label: Text(
-                          selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image',
-                          style: const TextStyle(color: Colors.white),
+                          },
+                          icon: const Icon(Icons.image, color: Colors.white),
+                          label: Text(
+                            selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image',
+                            style: const TextStyle(color: Colors.white),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
+              // Pied de page avec boutons
               const Divider(height: 1, color: Colors.white24),
-              // Boutons d'action
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    // Bouton Annuler
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
                       style: TextButton.styleFrom(
@@ -589,26 +679,65 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                       child: const Text('ANNULER'),
                     ),
                     const SizedBox(width: 8),
+                    // Bouton Enregistrer
                     ElevatedButton(
                       style: _buildButtonStyle(),
                       onPressed: () async {
-                        final item = ProfilCulturel(
-                          id: existing?.id,
-                          pays: paysCtrl.text.trim(),
-                          traditions: traditionsCtrl.text.trim(),
-                          gastronomie: gastronomieCtrl.text.trim(),
-                          comportementsAAdopter: adopterCtrl.text.trim(),
-                          comportementsAEviter: eviterCtrl.text.trim(),
-                          imageUrl: selectedImage,
-                        );
-                        if (existing == null) {
-                          await _profilService.create(item);
+                        // Vérifier la validation du formulaire
+                        if (formKey.currentState?.validate() ?? false) {
+                          final item = ProfilCulturel(
+                            id: existing?.id,
+                            pays: paysCtrl.text.trim(),
+                            traditions: traditionsCtrl.text.trim(),
+                            gastronomie: gastronomieCtrl.text.trim(),
+                            comportementsAAdopter: adopterCtrl.text.trim(),
+                            comportementsAEviter: eviterCtrl.text.trim(),
+                            imageUrl: selectedImage,
+                          );
+                          
+                          try {
+                            if (existing == null) {
+                              await _profilService.create(item);
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Profil créé avec succès'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } else {
+                              await _profilService.update(item);
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Profil mis à jour avec succès'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                            if (!mounted) return;
+                            Navigator.pop(ctx);
+                            await _loadAll();
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         } else {
-                          await _profilService.update(item);
+                          // Afficher un message d'erreur si la validation échoue
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Veuillez corriger les erreurs dans le formulaire'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
                         }
-                        if (!mounted) return;
-                        Navigator.pop(ctx);
-                        await _loadAll();
                       },
                       child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white)),
                     ),
@@ -634,6 +763,7 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
       itemBuilder: (context, i) {
         final e = _expressions[i];
         return Card(
+          color: Colors.blue[800], // Fond bleu très foncé
           clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,14 +789,14 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                             ),
                       ),
               ListTile(
-                title: Text('${e.langue} • ${e.expression}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(e.traduction),
+                title: Text('${e.langue} • ${e.expression}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                subtitle: Text(e.traduction, style: const TextStyle(color: Colors.white70)),
                 trailing: _isAdmin
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.edit),
+                            icon: const Icon(Icons.edit, color: Colors.white),
                             onPressed: () => _showExpressionForm(existing: e),
                           ),
                           IconButton(
@@ -686,8 +816,61 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
 
   Future<void> _deleteExpression(ExpressionLocale e) async {
     if (e.id == null) return;
-    await _exprService.delete(e.id!);
-    await _loadAll();
+    
+    bool confirmDelete = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression', style: TextStyle(color: Colors.white)),
+        content: const Text('Voulez-vous vraiment supprimer cette expression ?', style: TextStyle(color: Colors.white70)),
+        backgroundColor: Colors.blue[800],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Non', style: TextStyle(color: Colors.white)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Oui', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    ) ?? false;
+    
+    if (confirmDelete) {
+      await _exprService.delete(e.id!);
+      await _loadAll();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Expression supprimée avec succès')),
+        );
+      }
+    }
+  }
+
+  // Validation pour le champ langue
+  String? _validateLangue(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'La langue est obligatoire';
+    }
+    if (value.length < 2) {
+      return 'Le nom de la langue est trop court';
+    }
+    final containsNumbers = RegExp(r'[0-9]').hasMatch(value);
+    if (containsNumbers) {
+      return 'Le nom de la langue ne doit pas contenir de chiffres';
+    }
+    return null;
+  }
+
+  // Validation pour l'expression et sa traduction
+  String? _validateExpression(String? value, String champ) {
+    if (value == null || value.isEmpty) {
+      return 'Ce champ est obligatoire';
+    }
+    if (value.length < 2) {
+      return 'Veuillez fournir une expression plus longue';
+    }
+    return null;
   }
 
   Future<void> _showExpressionForm({ExpressionLocale? existing}) async {
@@ -697,6 +880,9 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     final categorieCtrl = TextEditingController(text: existing?.categorie ?? '');
     String? selectedImage = existing?.imageUrl;
     final imageService = ImageService();
+    
+    // Réinitialiser la clé du formulaire
+    final formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
@@ -724,153 +910,162 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Champ Langue
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Langue'),
-                        controller: langueCtrl,
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Champ Expression
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Expression'),
-                        controller: expressionCtrl,
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Champ Traduction
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Traduction'),
-                        controller: traductionCtrl,
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Champ Catégorie
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Catégorie'),
-                        controller: categorieCtrl,
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Section image
-                      if (selectedImage != null) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: imageService.isBase64Image(selectedImage!)
-                              ? Image.memory(
-                                  imageService.getBase64ImageBytes(selectedImage!)!,
-                                  height: 150,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.network(
-                                  selectedImage!,
-                                  height: 150,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                        height: 150,
-                                        color: Colors.grey[300],
-                                        child: const Icon(Icons.error),
-                                      ),
-                                ),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Champ Langue
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Langue *'),
+                          controller: langueCtrl,
+                          validator: _validateLangue,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                         ),
-                        const SizedBox(height: 8),
-                      ],
-                      
-                      // Bouton d'ajout d'image
-                      ElevatedButton.icon(
-                        style: _buildButtonStyle().copyWith(
-                          foregroundColor: MaterialStateProperty.all(Colors.white),
-                          textStyle: MaterialStateProperty.all(const TextStyle(color: Colors.white)),
+                        const SizedBox(height: 12),
+                        
+                        // Champ Expression
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Expression *'),
+                          controller: expressionCtrl,
+                          validator: (value) => _validateExpression(value, 'l\'expression'),
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                         ),
-                        onPressed: () async {
-                          final result = await showModalBottomSheet<String>(
-                            context: context,
-                            builder: (context) => SafeArea(
-                              child: Wrap(
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(Icons.photo_library),
-                                    title: const Text('Choisir depuis la galerie'),
-                                    onTap: () => Navigator.pop(context, 'gallery'),
+                        const SizedBox(height: 12),
+                        
+                        // Champ Traduction
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Traduction *'),
+                          controller: traductionCtrl,
+                          validator: (value) => _validateExpression(value, 'la traduction'),
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Champ Catégorie
+                        TextField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Catégorie'),
+                          controller: categorieCtrl,
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Section image
+                        if (selectedImage != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: imageService.isBase64Image(selectedImage!)
+                                ? Image.memory(
+                                    imageService.getBase64ImageBytes(selectedImage!)!,
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.network(
+                                    selectedImage!,
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Container(
+                                          height: 150,
+                                          color: Colors.grey[300],
+                                          child: const Icon(Icons.error),
+                                        ),
                                   ),
-                                  ListTile(
-                                    leading: const Icon(Icons.camera_alt),
-                                    title: const Text('Prendre une photo'),
-                                    onTap: () => Navigator.pop(context, 'camera'),
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.link),
-                                    title: const Text('Entrer une URL'),
-                                    onTap: () => Navigator.pop(context, 'url'),
-                                  ),
-                                  if (selectedImage != null)
-                                    ListTile(
-                                      leading: const Icon(Icons.delete, color: Colors.red),
-                                      title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
-                                      onTap: () => Navigator.pop(context, 'delete'),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-
-                          if (result == 'gallery') {
-                            final image = await imageService.pickImageFromGallery();
-                            if (image != null) {
-                              setState(() => selectedImage = image);
-                            }
-                          } else if (result == 'camera') {
-                            final image = await imageService.takePhoto();
-                            if (image != null) {
-                              setState(() => selectedImage = image);
-                            }
-                          } else if (result == 'url') {
-                            final urlCtrl = TextEditingController(text: selectedImage ?? '');
-                            final url = await showDialog<String>(
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        
+                        // Bouton d'ajout d'image
+                        ElevatedButton.icon(
+                          style: _buildButtonStyle().copyWith(
+                            foregroundColor: MaterialStateProperty.all(Colors.white),
+                            textStyle: MaterialStateProperty.all(const TextStyle(color: Colors.white)),
+                          ),
+                          onPressed: () async {
+                            final result = await showModalBottomSheet<String>(
                               context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('URL de l\'image'),
-                                content: TextField(
-                                  controller: urlCtrl,
-                                  decoration: const InputDecoration(
-                                    hintText: 'https://...',
-                                    border: OutlineInputBorder(),
-                                  ),
+                              builder: (context) => SafeArea(
+                                child: Wrap(
+                                  children: [
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_library),
+                                      title: const Text('Choisir depuis la galerie'),
+                                      onTap: () => Navigator.pop(context, 'gallery'),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.camera_alt),
+                                      title: const Text('Prendre une photo'),
+                                      onTap: () => Navigator.pop(context, 'camera'),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.link),
+                                      title: const Text('Entrer une URL'),
+                                      onTap: () => Navigator.pop(context, 'url'),
+                                    ),
+                                    if (selectedImage != null)
+                                      ListTile(
+                                        leading: const Icon(Icons.delete, color: Colors.red),
+                                        title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
+                                        onTap: () => Navigator.pop(context, 'delete'),
+                                      ),
+                                  ],
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Annuler'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context, urlCtrl.text),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
                               ),
                             );
-                            if (url != null && url.isNotEmpty) {
-                              setState(() => selectedImage = url);
+
+                            if (result == 'gallery') {
+                              final image = await imageService.pickImageFromGallery();
+                              if (image != null) {
+                                setState(() => selectedImage = image);
+                              }
+                            } else if (result == 'camera') {
+                              final image = await imageService.takePhoto();
+                              if (image != null) {
+                                setState(() => selectedImage = image);
+                              }
+                            } else if (result == 'url') {
+                              final urlCtrl = TextEditingController(text: selectedImage ?? '');
+                              final url = await showDialog<String>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('URL de l\'image'),
+                                  content: TextField(
+                                    controller: urlCtrl,
+                                    decoration: const InputDecoration(
+                                      hintText: 'https://...',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Annuler'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, urlCtrl.text),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (url != null && url.isNotEmpty) {
+                                setState(() => selectedImage = url);
+                              }
+                            } else if (result == 'delete') {
+                              setState(() => selectedImage = null);
                             }
-                          } else if (result == 'delete') {
-                            setState(() => selectedImage = null);
-                          }
-                        },
-                        icon: const Icon(Icons.image),
-                        label: Text(selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image'),
-                      ),
-                    ],
+                          },
+                          icon: const Icon(Icons.image),
+                          label: Text(selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -897,24 +1092,46 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                     ElevatedButton(
                       style: _buildButtonStyle(),
                       onPressed: () async {
-                        final item = ExpressionLocale(
-                          id: existing?.id,
-                          langue: langueCtrl.text.trim(),
-                          expression: expressionCtrl.text.trim(),
-                          traduction: traductionCtrl.text.trim(),
-                          categorie: categorieCtrl.text.trim(),
-                          imageUrl: selectedImage,
-                        );
-                        
-                        if (existing == null) {
-                          await _exprService.create(item);
+                        // Vérifier la validation du formulaire
+                        if (formKey.currentState?.validate() ?? false) {
+                          final item = ExpressionLocale(
+                            id: existing?.id,
+                            langue: langueCtrl.text.trim(),
+                            expression: expressionCtrl.text.trim(),
+                            traduction: traductionCtrl.text.trim(),
+                            categorie: categorieCtrl.text.trim(),
+                            imageUrl: selectedImage,
+                          );
+                          
+                          try {
+                            if (existing == null) {
+                              await _exprService.create(item);
+                            } else {
+                              await _exprService.update(item);
+                            }
+                            if (!mounted) return;
+                            Navigator.pop(ctx);
+                            await _loadAll();
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         } else {
-                          await _exprService.update(item);
+                          // Afficher un message d'erreur si la validation échoue
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Veuillez corriger les erreurs dans le formulaire'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
                         }
-                        
-                        if (!mounted) return;
-                        Navigator.pop(ctx);
-                        await _loadAll();
                       },
                       child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white)),
                     ),
@@ -940,6 +1157,7 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
       itemBuilder: (context, i) {
         final s = _securites[i];
         return Card(
+          color: Colors.blue[800], // Fond bleu très foncé
           clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -965,14 +1183,19 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                             ),
                       ),
               ListTile(
-                title: Text(s.pays, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(s.precautionsGenerales, maxLines: 2, overflow: TextOverflow.ellipsis),
+                title: Text(s.pays, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                subtitle: Text(
+                  s.precautionsGenerales, 
+                  maxLines: 2, 
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70),
+                ),
                 trailing: _isAdmin
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.edit),
+                            icon: const Icon(Icons.edit, color: Colors.white),
                             onPressed: () => _showSecuriteForm(existing: s),
                           ),
                           IconButton(
@@ -992,8 +1215,76 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
 
   Future<void> _deleteSecurite(SecuriteSante s) async {
     if (s.id == null) return;
-    await _secService.delete(s.id!);
-    await _loadAll();
+    
+    bool confirmDelete = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression', style: TextStyle(color: Colors.white)),
+        content: const Text('Voulez-vous vraiment supprimer ces informations de sécurité ?', style: TextStyle(color: Colors.white70)),
+        backgroundColor: Colors.blue[800],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Non', style: TextStyle(color: Colors.white)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Oui', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    ) ?? false;
+    
+    if (confirmDelete) {
+      await _secService.delete(s.id!);
+      await _loadAll();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Informations de sécurité supprimées avec succès')),
+        );
+      }
+    }
+  }
+
+  // Clé pour le formulaire de sécurité/santé
+  final _formKey = GlobalKey<FormState>();
+
+  // Validation pour le champ pays
+  String? _validatePays(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Le pays est obligatoire';
+    }
+    if (value.length < 2) {
+      return 'Le nom du pays est trop court';
+    }
+    // Vérifier si le texte contient des chiffres
+    final containsNumbers = RegExp(r'[0-9]').hasMatch(value);
+    if (containsNumbers) {
+      return 'Le nom du pays ne doit pas contenir de chiffres';
+    }
+    return null;
+  }
+
+  // Validation pour le champ contact d'urgence
+  String? _validateContactUrgence(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Un contact d\'urgence est requis';
+    }
+    if (value.length < 8) {
+      return 'Le contact est trop court';
+    }
+    return null;
+  }
+
+  // Validation pour les champs texte génériques
+  String? _validateTexte(String? value, String champ) {
+    if (value == null || value.isEmpty) {
+      return 'Ce champ est obligatoire';
+    }
+    if (value.length < 5) {
+      return 'Veuillez fournir plus de détails';
+    }
+    return null;
   }
 
   Future<void> _showSecuriteForm({SecuriteSante? existing}) async {
@@ -1004,6 +1295,9 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
     final urgenceCtrl = TextEditingController(text: existing?.urgenceContact ?? '');
     String? selectedImage = existing?.imageUrl;
     final imageService = ImageService();
+    
+    // Réinitialiser la clé du formulaire
+    final formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
@@ -1028,200 +1322,184 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Pays'),
-                        controller: paysCtrl,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Vaccins recommandés'),
-                        controller: vaccinsCtrl,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Précautions générales'),
-                        controller: precautCtrl,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Zones à risque'),
-                        controller: zonesCtrl,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _buildInputDecoration('Contact d\'urgence'),
-                        controller: urgenceCtrl,
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Section image
-                      if (selectedImage != null) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: imageService.isBase64Image(selectedImage!)
-                              ? Image.memory(
-                                  imageService.getBase64ImageBytes(selectedImage!)!,
-                                  height: 150,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.network(
-                                  selectedImage!,
-                                  height: 150,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                        height: 150,
-                                        color: Colors.grey[300],
-                                        child: const Icon(Icons.error, color: Colors.white),
-                                      ),
-                                ),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Champ Pays
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Pays *'),
+                          controller: paysCtrl,
+                          validator: _validatePays,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          keyboardType: TextInputType.text,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.deny(RegExp(r'[0-9]')), // Empêche la saisie de chiffres
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                      ],
-                      
-                      // Boutons d'action pour l'image
-                      const Text(
-                        'Sélectionner une image',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                        const SizedBox(height: 12),
+                        
+                        // Champ Vaccins recommandés
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Vaccins recommandés *'),
+                          controller: vaccinsCtrl,
+                          maxLines: 2,
+                          validator: (value) => _validateTexte(value, 'les vaccins recommandés'),
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 4.0),
-                              child: ElevatedButton.icon(
-                                style: _buildButtonStyle(),
-                                icon: const Icon(Icons.photo_library, size: 18, color: Colors.white),
-                                label: const Text('Galerie', style: TextStyle(fontSize: 13, color: Colors.white)),
-                                onPressed: () async {
-                                  final image = await imageService.pickImageFromGallery();
-                                  if (image != null) {
-                                    setState(() => selectedImage = image);
-                                  }
-                                },
-                              ),
-                            ),
+                        const SizedBox(height: 12),
+                        
+                        // Champ Précautions générales
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Précautions générales *'),
+                          controller: precautCtrl,
+                          maxLines: 2,
+                          validator: (value) => _validateTexte(value, 'les précautions générales'),
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Champ Zones à risque
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Zones à risque *'),
+                          controller: zonesCtrl,
+                          maxLines: 2,
+                          validator: (value) => _validateTexte(value, 'les zones à risque'),
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Champ Contact d'urgence
+                        TextFormField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _buildInputDecoration('Contact d\'urgence *'),
+                          controller: urgenceCtrl,
+                          validator: _validateContactUrgence,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Section image
+                        if (selectedImage != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: imageService.isBase64Image(selectedImage!)
+                                ? Image.memory(
+                                    imageService.getBase64ImageBytes(selectedImage!)!,
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.network(
+                                    selectedImage!,
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Container(
+                                          height: 150,
+                                          color: Colors.grey[300],
+                                          child: const Icon(Icons.error),
+                                        ),
+                                  ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                              child: ElevatedButton.icon(
-                                style: _buildButtonStyle(),
-                                icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
-                                label: const Text('Appareil', style: TextStyle(fontSize: 13, color: Colors.white)),
-                                onPressed: () async {
-                                  final image = await imageService.takePhoto();
-                                  if (image != null) {
-                                    setState(() => selectedImage = image);
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 4.0),
-                              child: ElevatedButton.icon(
-                                style: _buildButtonStyle(),
-                                icon: const Icon(Icons.link, size: 18, color: Colors.white),
-                                label: const Text('URL', style: TextStyle(fontSize: 13, color: Colors.white)),
-                                onPressed: () async {
-                                  final url = await showDialog<String>(
-                                    context: context,
-                                    builder: (context) => _buildThemedDialog(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                                        children: [
-                                          const Padding(
-                                            padding: EdgeInsets.all(16.0),
-                                            child: Text(
-                                              'URL de l\'image',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.all(16.0),
-                                            child: TextField(
-                                              style: const TextStyle(color: Colors.white),
-                                              controller: TextEditingController(text: selectedImage ?? ''),
-                                              decoration: _buildInputDecoration('Entrez l\'URL de l\'image'),
-                                              onSubmitted: (value) {
-                                                Navigator.pop(context, value);
-                                              },
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.all(16.0),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.end,
-                                              children: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.pop(context),
-                                                  child: const Text('ANNULER', style: TextStyle(color: Colors.white70)),
-                                                ),
-                                                const SizedBox(width: 16),
-                                                ElevatedButton(
-                                                  style: _buildButtonStyle(),
-                                                  onPressed: () {
-                                                    Navigator.pop(context, selectedImage);
-                                                  },
-                                                  child: const Text('OK', style: TextStyle(color: Colors.white)),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                  if (url != null && url.isNotEmpty) {
-                                    setState(() => selectedImage = url);
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
+                          const SizedBox(height: 8),
                         ],
-                      ),
-                      if (selectedImage != null) ...[
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton.icon(
-                            icon: const Icon(Icons.delete, color: Colors.red, size: 18),
-                            label: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red, fontSize: 13)),
-                            onPressed: () => setState(() => selectedImage = null),
+                        
+                        // Bouton d'ajout d'image
+                        ElevatedButton.icon(
+                          style: _buildButtonStyle().copyWith(
+                            backgroundColor: MaterialStateProperty.all(Colors.blue[700]),
+                            foregroundColor: MaterialStateProperty.all(Colors.white),
+                          ),
+                          onPressed: () async {
+                            final result = await showModalBottomSheet<String>(
+                              context: context,
+                              builder: (context) => SafeArea(
+                                child: Wrap(
+                                  children: [
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_library),
+                                      title: const Text('Choisir depuis la galerie'),
+                                      onTap: () => Navigator.pop(context, 'gallery'),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.camera_alt),
+                                      title: const Text('Prendre une photo'),
+                                      onTap: () => Navigator.pop(context, 'camera'),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.link),
+                                      title: const Text('Entrer une URL'),
+                                      onTap: () => Navigator.pop(context, 'url'),
+                                    ),
+                                    if (selectedImage != null)
+                                      ListTile(
+                                        leading: const Icon(Icons.delete, color: Colors.red),
+                                        title: const Text('Supprimer l\'image', style: TextStyle(color: Colors.red)),
+                                        onTap: () => Navigator.pop(context, 'delete'),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+
+                            if (result == 'gallery') {
+                              final image = await imageService.pickImageFromGallery();
+                              if (image != null) {
+                                setState(() => selectedImage = image);
+                              }
+                            } else if (result == 'camera') {
+                              final image = await imageService.takePhoto();
+                              if (image != null) {
+                                setState(() => selectedImage = image);
+                              }
+                            } else if (result == 'url') {
+                              final urlCtrl = TextEditingController(text: selectedImage ?? '');
+                              final url = await showDialog<String>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('URL de l\'image'),
+                                  content: TextField(
+                                    controller: urlCtrl,
+                                    decoration: const InputDecoration(
+                                      hintText: 'https://...',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Annuler'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, urlCtrl.text),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (url != null && url.isNotEmpty) {
+                                setState(() => selectedImage = url);
+                              }
+                            } else if (result == 'delete') {
+                              setState(() => selectedImage = null);
+                            }
+                          },
+                          icon: const Icon(Icons.image, color: Colors.white),
+                          label: Text(
+                            selectedImage == null ? 'Ajouter une image' : 'Modifier l\'image',
+                            style: const TextStyle(color: Colors.white),
                           ),
                         ),
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -1244,23 +1522,61 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
                     ElevatedButton(
                       style: _buildButtonStyle(),
                       onPressed: () async {
-                        final item = SecuriteSante(
-                          id: existing?.id,
-                          pays: paysCtrl.text.trim(),
-                          vaccinsRecommandes: vaccinsCtrl.text.trim(),
-                          precautionsGenerales: precautCtrl.text.trim(),
-                          zonesARisque: zonesCtrl.text.trim(),
-                          urgenceContact: urgenceCtrl.text.trim(),
-                          imageUrl: selectedImage,
-                        );
-                        if (existing == null) {
-                          await _secService.create(item);
+                        // Vérifier la validation du formulaire
+                        if (formKey.currentState?.validate() ?? false) {
+                          final item = SecuriteSante(
+                            id: existing?.id,
+                            pays: paysCtrl.text.trim(),
+                            vaccinsRecommandes: vaccinsCtrl.text.trim(),
+                            precautionsGenerales: precautCtrl.text.trim(),
+                            zonesARisque: zonesCtrl.text.trim(),
+                            urgenceContact: urgenceCtrl.text.trim(),
+                            imageUrl: selectedImage,
+                          );
+                          
+                          try {
+                            if (existing == null) {
+                              await _secService.create(item);
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Fiche de sécurité créée avec succès'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } else {
+                              await _secService.update(item);
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Fiche de sécurité mise à jour avec succès'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                            if (!mounted) return;
+                            Navigator.pop(ctx);
+                            await _loadAll();
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         } else {
-                          await _secService.update(item);
+                          // Afficher un message d'erreur si la validation échoue
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Veuillez corriger les erreurs dans le formulaire'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
                         }
-                        if (!mounted) return;
-                        Navigator.pop(ctx);
-                        await _loadAll();
                       },
                       child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white)),
                     ),
@@ -1495,21 +1811,41 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
           if (_conversionResult != null)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
-              child: Text('Résultat: $_conversionResult'),
+              child: Text('Résultat: $_conversionResult', style: const TextStyle(color: Colors.white)),
             ),
 
           const Divider(height: 24),
 
-          Text('Heure locale', style: Theme.of(context).textTheme.titleMedium),
+          Text('Heure locale', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white)),
           const SizedBox(height: 8),
           TextField(
             controller: _countryTimeCtrl,
-            decoration: const InputDecoration(labelText: 'Pays (ex: France)'),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Pays (ex: France)',
+              labelStyle: const TextStyle(color: Colors.white70),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white.withOpacity(0.7)),
+              ),
+              focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _tzCtrl,
-            decoration: const InputDecoration(labelText: 'Fuseau horaire (optionnel, ex: Europe/Paris)'),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Fuseau horaire (optionnel, ex: Europe/Paris)',
+              labelStyle: const TextStyle(color: Colors.white70),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white.withOpacity(0.7)),
+              ),
+              focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           ElevatedButton(
@@ -1526,26 +1862,46 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
           if (_localTime != null)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
-              child: Text('Heure locale: ${_localTime!.toLocal()}'),
+              child: Text('Heure locale: ${_localTime!.toLocal()}', style: const TextStyle(color: Colors.white)),
             ),
 
           const Divider(height: 24),
 
-          Text('Qualité de l\'air (AQI)', style: Theme.of(context).textTheme.titleMedium),
+          Text('Qualité de l\'air (AQI)', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white)),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _aqCityCtrl,
-                  decoration: const InputDecoration(labelText: 'Ville (ex: Paris)'),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Ville (ex: Paris)',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white.withOpacity(0.7)),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   controller: _aqCountryCtrl,
-                  decoration: const InputDecoration(labelText: 'Pays/Code (ex: FR)'),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Pays/Code (ex: FR)',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white.withOpacity(0.7)),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1560,7 +1916,7 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
           if (_aqi != null)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
-              child: Text('AQI: $_aqi'),
+              child: Text('AQI: $_aqi', style: const TextStyle(color: Colors.white)),
             ),
           if (_aqComponents != null)
             Padding(
@@ -1675,9 +2031,16 @@ class _CultureModuleScreenState extends State<CultureModuleScreen>
           const SizedBox(height: 8),
           TextField(
             controller: _recCountryCtrl,
-            decoration: const InputDecoration(
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
               labelText: 'Pays (ex: France, Tunisia, Turkey)',
-              border: OutlineInputBorder(),
+              labelStyle: const TextStyle(color: Colors.white70),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white.withOpacity(0.7)),
+              ),
+              focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
+              ),
             ),
             onChanged: (val) {
               setState(() {

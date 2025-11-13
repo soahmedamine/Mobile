@@ -57,6 +57,7 @@ dependencies:
   
   # UI Components
   google_fonts: ^6.1.0
+  speech_to_text: ^6.6.0
   
   # Authentication - Using only Google for now to avoid conflicts
   firebase_core: ^2.15.1
