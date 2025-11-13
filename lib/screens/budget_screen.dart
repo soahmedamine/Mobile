@@ -114,9 +114,12 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
     return DefaultTabController(
       length: 3,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -124,29 +127,52 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
             },
             tooltip: 'Back to Home',
           ),
-          title: const Text('Travel Budget Tracker'),
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
+          title: const Text(
+            'Gestion Budget',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              color: Colors.white,
+            ),
+          ),
           bottom: TabBar(
             controller: _tabController,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
             tabs: const [
-              Tab(icon: Icon(Icons.assessment), text: 'Overview'),
-              Tab(icon: Icon(Icons.add_chart), text: 'Analytics'),
-              Tab(icon: Icon(Icons.settings), text: 'Settings'),
+              Tab(icon: Icon(Icons.assessment), text: 'Aperçu'),
+              Tab(icon: Icon(Icons.add_chart), text: 'Analyse'),
+              Tab(icon: Icon(Icons.settings), text: 'Paramètres'),
             ],
           ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildOverviewTab(),
-            _buildAnalyticsTab(),
-            _buildSettingsTab(),
-          ],
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.blue[800]!, Colors.blue[500]!, Colors.blue[200]!],
+            ),
+          ),
+          child: SafeArea(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildOverviewTab(),
+                _buildAnalyticsTab(),
+                _buildSettingsTab(),
+              ],
+            ),
+          ),
         ),
-        floatingActionButton: FloatingActionButton(
+        floatingActionButton: FloatingActionButton.extended(
           onPressed: () => _showAddTransactionDialog(context),
-          child: const Icon(Icons.add),
+          icon: const Icon(Icons.add, size: 24.0),
+          label: const Text('Ajouter'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.blue[700],
+          elevation: 4,
         ),
       ),
     );
@@ -177,27 +203,62 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
             children: [
               // Budget Summary Card
               Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [
-                      const Text('Total Budget', style: TextStyle(fontSize: 18)),
+                      Row(
+                        children: [
+                          Icon(Icons.account_balance_wallet, color: Colors.blue[700], size: 28),
+                          const SizedBox(width: 8),
+                          const Text('Budget Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         '\$${totalBudget.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.blue[800]),
                       ),
                       const SizedBox(height: 20),
-                      LinearProgressIndicator(
-                        value: totalBudget > 0 ? totalSpent / totalBudget : 0,
-                        backgroundColor: Colors.grey[200],
-                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: totalBudget > 0 ? totalSpent / totalBudget : 0,
+                          backgroundColor: Colors.grey[200],
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
+                          minHeight: 10,
+                        ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Spent: \$${totalSpent.toStringAsFixed(2)}'),
-                          Text('Remaining: \$${remainingBudget.toStringAsFixed(2)}'),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Dépensé', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                              const SizedBox(height: 4),
+                              Text(
+                                '\$${totalSpent.toStringAsFixed(2)}',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('Restant', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                              const SizedBox(height: 4),
+                              Text(
+                                '\$${remainingBudget.toStringAsFixed(2)}',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ],
@@ -205,42 +266,90 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
                 ),
               ),
               
-              const SizedBox(height: 20),
-              
+              const SizedBox(height: 16),
+
               // Prediction Card
               Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Spending Prediction',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Icon(Icons.trending_up, color: Colors.orange[700], size: 28),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Prévision de Dépenses',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Daily Average: \$${(prediction['dailyAverage'] as double).toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 16),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Moyenne Journalière:',
+                              style: TextStyle(fontSize: 15, color: Colors.grey[700]),
+                            ),
+                            Text(
+                              '\$${(prediction['dailyAverage'] as double).toStringAsFixed(2)}',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Predicted Weekly Expense: \$${(prediction['predictedExpense'] as double).toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Prévision Hebdomadaire:',
+                              style: TextStyle(fontSize: 15, color: Colors.grey[700]),
+                            ),
+                            Text(
+                              '\$${(prediction['predictedExpense'] as double).toStringAsFixed(2)}',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
               
-              const SizedBox(height: 20),
-              
+              const SizedBox(height: 16),
+
               // Recent Transactions
-              const Text(
-                'Recent Transactions',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Icon(Icons.history, color: Colors.white, size: 24),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Transactions Récentes',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               _buildRecentTransactions(),
             ],
           ),
@@ -265,8 +374,33 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
         final categoryTotals = data['categoryTotals'] as Map<String, double>;
         
         if (categoryTotals.isEmpty) {
-          return const Center(
-            child: Text('No expenses yet. Add your first transaction!'),
+          return Center(
+            child: Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              margin: const EdgeInsets.all(16),
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.pie_chart_outline, size: 80, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Aucune dépense',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ajoutez votre première transaction!',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
         
@@ -291,17 +425,27 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
             children: [
               // Pie Chart
               SizedBox(
-                height: 300,
+                height: 320,
                 child: Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(20.0),
                     child: Column(
                       children: [
-                        const Text(
-                          'Spending by Category',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        Row(
+                          children: [
+                            Icon(Icons.pie_chart, color: Colors.blue[700], size: 28),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Dépenses par Catégorie',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 16),
                         Expanded(
                           child: PieChart(
                             PieChartData(
@@ -317,19 +461,36 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
                 ),
               ),
               
-              const SizedBox(height: 20),
-              
+              const SizedBox(height: 16),
+
               // Category Breakdown
-              const Text(
-                'Category Breakdown',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Icon(Icons.category, color: Colors.white, size: 24),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Détails par Catégorie',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              ...categoryTotals.entries.map((entry) => _buildCategoryRow(
-                entry.key,
-                entry.value,
-                _getCategoryColor(entry.key),
-              )),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: categoryTotals.entries.map((entry) => _buildCategoryRow(
+                      entry.key,
+                      entry.value,
+                      _getCategoryColor(entry.key),
+                    )).toList(),
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -343,53 +504,136 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Currency',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            value: _selectedCurrency,
-            items: ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'TND']
-                .map((currency) => DropdownMenuItem(
-                      value: currency,
-                      child: Text(currency),
-                    ))
-                .toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedCurrency = value;
-                });
-              }
-            },
+          // Currency Card
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.attach_money, color: Colors.blue[700], size: 28),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Devise',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _selectedCurrency,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    items: ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'TND']
+                        .map((currency) => DropdownMenuItem(
+                              value: currency,
+                              child: Text(currency, style: const TextStyle(fontSize: 16)),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _selectedCurrency = value;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
           
-          const SizedBox(height: 20),
-          
-          const Text(
-            'Budget Settings',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          const SizedBox(height: 16),
+
+          // Budget Settings Card
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.settings, color: Colors.orange[700], size: 28),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Paramètres Budget',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Configurez vos préférences de budget de voyage ici.',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 10),
-          const Text('Configure your travel budget preferences here.'),
-          
-          const SizedBox(height: 20),
-          
-          const Text(
-            'Data Management',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Implement export functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Export feature coming soon!')),
-              );
-            },
-            icon: const Icon(Icons.download),
-            label: const Text('Export Data'),
+
+          const SizedBox(height: 16),
+
+          // Data Management Card
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.storage, color: Colors.green[700], size: 28),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Gestion des Données',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // TODO: Implement export functionality
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Fonctionnalité d\'export bientôt disponible!')),
+                        );
+                      },
+                      icon: const Icon(Icons.download, size: 20),
+                      label: const Text('Exporter les Données', style: TextStyle(fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -405,10 +649,28 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
         }
         
         if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Card(
+          return Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No transactions yet. Add your first transaction!'),
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  Icon(Icons.receipt_long_outlined, size: 60, color: Colors.grey[400]),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Aucune transaction',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ajoutez votre première transaction!',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -417,24 +679,43 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
         
         return Column(
           children: transactions.map((transaction) => Card(
+            elevation: 2,
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               leading: CircleAvatar(
                 backgroundColor: _getCategoryColor(transaction.category),
+                radius: 24,
                 child: Text(
                   transaction.category[0].toUpperCase(),
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              title: Text(transaction.category),
+              title: Text(
+                transaction.category,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
               subtitle: Text(
                 '${transaction.description?.isNotEmpty == true ? '${transaction.description} • ' : ''}'
                 '${DateFormat('MMM d, y').format(transaction.date)}',
+                style: TextStyle(color: Colors.grey[600], fontSize: 13),
               ),
-              trailing: Text(
-                '${transaction.type == 'expense' ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: transaction.type == 'expense' ? Colors.red : Colors.green,
-                  fontWeight: FontWeight.bold,
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: transaction.type == 'expense' ? Colors.red[50] : Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${transaction.type == 'expense' ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: transaction.type == 'expense' ? Colors.red[700] : Colors.green[700],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
@@ -445,25 +726,50 @@ class _BudgetScreenState extends State<BudgetScreen> with SingleTickerProviderSt
   }
   
   Widget _buildCategoryRow(String category, double amount, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Row(
         children: [
           Container(
-            width: 20,
-            height: 20,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(4),
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(category),
+            child: Text(
+              category,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
           ),
-          Text(
-            '\$${amount.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '\$${amount.toStringAsFixed(2)}',
+              style: TextStyle(fontWeight: FontWeight.bold, color: color.withOpacity(0.9), fontSize: 14),
+            ),
           ),
         ],
       ),
